@@ -1,0 +1,5534 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#03060e">
+<meta name="description" content="三体宇宙 · 三体运动实时演算、编年史星穹与人物长廊。">
+<title>三体宇宙 · The Three-Body Universe</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%2303060e'/%3E%3Cpath d='M16 4l2.6 9.4L28 16l-9.4 2.6L16 28l-2.6-9.4L4 16l9.4-2.6z' fill='%23a9d6ff'/%3E%3C/svg%3E">
+<style>
+/* ============================================================
+   三体宇宙 · 单文件交互站
+   状态：intro / chronicle / characters
+   ============================================================ */
+
+:root{
+  --bg: #03060e;
+  --bg-2: #050b18;
+  --ink: #eaf2ff;
+  --muted: #8fa4c2;
+  --dim: #667c9c;
+  --line: rgba(150, 185, 240, .14);
+  --line-soft: rgba(150, 185, 240, .08);
+  --glass: rgba(7, 14, 27, .78);
+  --blue: #6ea8ff;
+  --blue-rgb: 110, 168, 255;
+  --purple: #b48cff;
+  --purple-rgb: 180, 140, 255;
+  --gold: #f0b866;
+  --gold-rgb: 240, 184, 102;
+  --cyan: #8fdcff;
+  --sans: "PingFang SC", "HarmonyOS Sans SC", "Microsoft YaHei", "Noto Sans SC", "Source Han Sans SC", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --serif: "Songti SC", "STSong", "Noto Serif SC", "Source Han Serif SC", "SimSun", serif;
+  --mono: "Cascadia Mono", "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+  --bar-h: 74px;
+}
+
+*,*::before,*::after{ box-sizing: border-box; }
+
+html{
+  background: var(--bg);
+  -webkit-text-size-adjust: 100%;
+  scrollbar-color: #22334e #03060e;
+}
+
+body{
+  margin: 0;
+  min-height: 100vh;
+  overflow: hidden;
+  font-family: var(--sans);
+  font-size: 15px;
+  line-height: 1.65;
+  color: var(--ink);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+h1,h2,h3,p,ul{ margin: 0; }
+button,input{ font: inherit; color: inherit; }
+button{ border: 0; padding: 0; background: none; cursor: pointer; }
+img{ display: block; }
+svg{ display: block; }
+::selection{ background: rgba(143, 220, 255, .26); color: #fff; }
+
+::-webkit-scrollbar{ width: 10px; height: 10px; }
+::-webkit-scrollbar-track{ background: #03060e; }
+::-webkit-scrollbar-thumb{ background: #1b2b44; border-radius: 9px; border: 2px solid #03060e; }
+::-webkit-scrollbar-thumb:hover{ background: #29425f; }
+
+:focus-visible{
+  outline: 2px solid rgba(143, 220, 255, .75);
+  outline-offset: 3px;
+}
+
+.sr-only{
+  position: absolute !important;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ============================================================
+   页面状态与基础框架
+   ============================================================ */
+
+.app{ position: fixed; inset: 0; z-index: 1; }
+
+.page{
+  position: fixed;
+  inset: 0;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity .55s ease, visibility .55s ease;
+  overflow: hidden;
+  background: var(--bg);
+}
+.page.is-active{
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+.page-intro{ overflow-y: auto; overflow-x: hidden; }
+
+.ghost-btn{
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 32px;
+  padding: 5px 11px 5px 8px;
+  border: 1px solid rgba(150, 185, 240, .16);
+  border-radius: 7px;
+  background: rgba(5, 11, 22, .32);
+  color: #9fb4d2;
+  font-size: 11px;
+  letter-spacing: .1em;
+  transition: color .25s, border-color .25s, background .25s, box-shadow .25s;
+}
+.ghost-btn:hover{
+  color: #eef7ff;
+  border-color: rgba(143, 220, 255, .38);
+  background: rgba(143, 220, 255, .07);
+  box-shadow: 0 0 22px rgba(110, 168, 255, .1);
+}
+.ghost-btn .arrow{
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--cyan);
+  opacity: .8;
+}
+
+/* 背景音乐控制 */
+.audio-btn{
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 30px;
+  padding: 0 9px;
+  border: 1px solid rgba(150, 185, 240, .14);
+  border-radius: 7px;
+  background: rgba(5, 11, 22, .32);
+  color: #8499b7;
+  font-size: 9.5px;
+  letter-spacing: .08em;
+  white-space: nowrap;
+  transition: color .25s, border-color .25s, background .25s, box-shadow .25s;
+}
+.audio-btn:hover{
+  color: #e6f4ff;
+  border-color: rgba(143, 220, 255, .34);
+  background: rgba(143, 220, 255, .06);
+}
+.audio-btn.is-playing{
+  color: #d9f1ff;
+  border-color: rgba(143, 220, 255, .32);
+  background: rgba(143, 220, 255, .06);
+  box-shadow: 0 0 18px rgba(110, 168, 255, .08);
+}
+.audio-wave{
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 2px;
+  width: 13px;
+  height: 12px;
+}
+.audio-wave i{
+  display: block;
+  width: 2px;
+  height: 4px;
+  border-radius: 1px;
+  background: currentColor;
+  opacity: .55;
+  transition: height .25s ease, opacity .25s ease;
+}
+.audio-btn.is-playing .audio-wave i{
+  opacity: 1;
+  animation: audioWave 1.05s ease-in-out infinite;
+}
+.audio-btn.is-playing .audio-wave i:nth-child(2){ animation-delay: .16s; }
+.audio-btn.is-playing .audio-wave i:nth-child(3){ animation-delay: .32s; }
+@keyframes audioWave{
+  0%, 100%{ height: 4px; }
+  50%{ height: 11px; }
+}
+.audio-label{ line-height: 1; }
+
+.audio-control{
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  flex: 0 0 auto;
+}
+.audio-volume{
+  -webkit-appearance: none;
+  appearance: none;
+  width: 52px;
+  height: 18px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  flex: 0 0 auto;
+}
+.audio-volume::-webkit-slider-runnable-track{
+  width: 100%;
+  height: 2px;
+  border-radius: 99px;
+  background: linear-gradient(90deg,
+    #8fdcff 0%,
+    #8fdcff var(--vol, 30%),
+    rgba(150, 185, 240, .2) var(--vol, 30%),
+    rgba(150, 185, 240, .2) 100%);
+}
+.audio-volume::-moz-range-track{
+  width: 100%;
+  height: 2px;
+  border-radius: 99px;
+  background: linear-gradient(90deg,
+    #8fdcff 0%,
+    #8fdcff var(--vol, 30%),
+    rgba(150, 185, 240, .2) var(--vol, 30%),
+    rgba(150, 185, 240, .2) 100%);
+}
+.audio-volume::-webkit-slider-thumb{
+  -webkit-appearance: none;
+  appearance: none;
+  width: 8px;
+  height: 8px;
+  margin-top: -3px;
+  border: 1px solid rgba(200, 242, 255, .9);
+  border-radius: 50%;
+  background: #dff7ff;
+  box-shadow: 0 0 8px rgba(143, 220, 255, .5);
+}
+.audio-volume::-moz-range-thumb{
+  width: 7px;
+  height: 7px;
+  border: 1px solid rgba(200, 242, 255, .9);
+  border-radius: 50%;
+  background: #dff7ff;
+  box-shadow: 0 0 8px rgba(143, 220, 255, .5);
+}
+.audio-volume:focus-visible{
+  outline: 1px solid rgba(143, 220, 255, .6);
+  outline-offset: 4px;
+  border-radius: 99px;
+}
+.intro-audio{
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 7;
+  gap: 8px;
+}
+.intro-audio .audio-btn{
+  height: 34px;
+  padding: 0 12px;
+  background: rgba(5, 11, 22, .6);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, .24);
+}
+.intro-audio .audio-volume{ width: 58px; }
+
+.eyebrow{
+  display: block;
+  font-family: var(--mono);
+  font-size: 8.5px;
+  line-height: 1.4;
+  letter-spacing: .28em;
+  color: #7188a9;
+  text-transform: uppercase;
+}
+
+/* ============================================================
+   开篇 · Intro
+   ============================================================ */
+
+.page-intro{
+  background:
+    radial-gradient(1100px 760px at 72% -10%, rgba(36, 72, 150, .2), transparent 62%),
+    radial-gradient(850px 720px at 12% 35%, rgba(74, 42, 140, .13), transparent 66%),
+    linear-gradient(180deg, #02040a, #040914 55%, #02050c);
+}
+
+.intro-canvas{
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  opacity: 1;
+  pointer-events: none;
+}
+.intro-haze{
+  position: fixed;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse at 50% 49%, rgba(2, 5, 12, .34) 0%, rgba(2, 5, 12, .16) 34%, transparent 62%),
+    radial-gradient(ellipse at 50% 50%, transparent 0%, transparent 48%, rgba(2, 4, 10, .5) 100%);
+}
+.intro-vignette{
+  position: fixed;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(2, 4, 10, .7), transparent 18%, transparent 82%, rgba(2, 4, 10, .8));
+}
+
+.intro-corner{
+  position: fixed;
+  top: calc(22px + env(safe-area-inset-top));
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-family: var(--mono);
+  font-size: 8px;
+  line-height: 1.5;
+  letter-spacing: .22em;
+  color: rgba(157, 186, 222, .4);
+  pointer-events: none;
+}
+.intro-corner-tl{ left: 28px; }
+.intro-corner-tr{ right: 28px; text-align: right; }
+.intro-corner span:last-child{ color: rgba(157, 186, 222, .24); font-size: 7.5px; }
+
+.intro-content{
+  position: relative;
+  z-index: 4;
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 104px 22px 86px;
+  text-align: center;
+}
+
+.intro-quote{
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 17px;
+  font-weight: 300;
+  font-size: clamp(11px, 1.15vw, 13px);
+  line-height: 1.8;
+  letter-spacing: .3em;
+  color: rgba(225, 238, 255, .58);
+  text-shadow: 0 0 18px rgba(120, 175, 255, .12);
+}
+.quote-rule{
+  display: block;
+  width: clamp(28px, 6vw, 88px);
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(150, 200, 255, .38));
+  flex: none;
+}
+.quote-rule:last-child{ transform: scaleX(-1); }
+
+.title-wrap{
+  position: relative;
+  display: inline-block;
+  margin-top: 22px;
+  padding: 8px 18px 16px;
+}
+.title-frame{
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: .55;
+}
+.title-frame::before,
+.title-frame::after{
+  content: "";
+  position: absolute;
+  width: 58px;
+  height: 1px;
+  background: linear-gradient(90deg, rgba(143, 220, 255, .65), transparent);
+}
+.title-frame::before{ left: 0; top: 0; }
+.title-frame::after{
+  right: 0;
+  bottom: 0;
+  transform: scaleX(-1);
+  background: linear-gradient(90deg, rgba(180, 140, 255, .5), transparent);
+}
+.title-frame span{
+  position: absolute;
+  width: 1px;
+  height: 26px;
+  background: linear-gradient(180deg, rgba(143, 220, 255, .55), transparent);
+}
+.title-frame span:first-child{ left: 0; top: 0; }
+.title-frame span:last-child{ right: 0; bottom: 0; transform: scaleY(-1); }
+
+.universe-title{
+  position: relative;
+  display: grid;
+  place-items: center;
+  font-family: var(--sans);
+  font-size: clamp(64px, 11.4vw, 164px);
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: .045em;
+  white-space: nowrap;
+  color: #eaf4ff;
+  isolation: isolate;
+}
+.title-layer{
+  grid-area: 1 / 1;
+  display: block;
+  white-space: nowrap;
+}
+.title-base{
+  background: linear-gradient(180deg, #ffffff 0%, #eef6ff 18%, #c3ddfa 43%, #8db6e8 68%, #cfe2f7 86%, #93b7df 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter:
+    drop-shadow(0 0 26px rgba(110, 168, 255, .22))
+    drop-shadow(0 2px 0 rgba(255, 255, 255, .1));
+  animation: titleBreath 8s ease-in-out infinite;
+}
+@keyframes titleBreath{
+  0%,100%{ filter: drop-shadow(0 0 22px rgba(110, 168, 255, .18)) drop-shadow(0 2px 0 rgba(255,255,255,.08)); }
+  50%{ filter: drop-shadow(0 0 34px rgba(143, 220, 255, .3)) drop-shadow(0 2px 0 rgba(255,255,255,.12)); }
+}
+.title-edge{
+  color: transparent;
+  -webkit-text-stroke: 1.15px rgba(156, 216, 255, .38);
+  transform: translate(4px, 4px);
+  opacity: .7;
+  filter: drop-shadow(0 0 9px rgba(110, 200, 255, .24));
+  -webkit-mask-image: repeating-linear-gradient(103deg, #000 0 52px, transparent 52px 56px);
+  mask-image: repeating-linear-gradient(103deg, #000 0 52px, transparent 52px 56px);
+}
+.title-cut{
+  background: linear-gradient(180deg, rgba(2, 6, 14, .92) 0%, rgba(2, 6, 14, .55) 38%, transparent 56%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  clip-path: polygon(0 0, 100% 0, 100% 31%, 0 22%);
+  opacity: .72;
+}
+.title-slice{
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  mix-blend-mode: screen;
+  pointer-events: none;
+}
+.slice-a{
+  background: linear-gradient(90deg, #8ed4ff, #ffffff 48%, #b8a4ff);
+  clip-path: polygon(0 39.4%, 100% 35.8%, 100% 39.1%, 0 42.7%);
+  transform: translate(6px, 0);
+  opacity: .58;
+  filter: drop-shadow(0 0 7px rgba(130, 210, 255, .45));
+}
+.slice-b{
+  background: linear-gradient(90deg, #ffffff, #a9c9ff 58%, #7196cc);
+  clip-path: polygon(0 61.2%, 100% 57.6%, 100% 60.2%, 0 63.8%);
+  transform: translate(-5px, 0);
+  opacity: .34;
+}
+.slice-c{
+  background: linear-gradient(90deg, transparent, #d4f1ff 50%, transparent);
+  clip-path: polygon(0 21.6%, 100% 19.2%, 100% 21%, 0 23.4%);
+  opacity: .46;
+}
+.title-scan{
+  background: linear-gradient(180deg, transparent 0 45%, rgba(190, 235, 255, .63) 49%, rgba(190, 235, 255, .12) 52%, transparent 56%);
+  background-size: 100% 300%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: titleScan 12s linear infinite;
+  opacity: .62;
+}
+@keyframes titleScan{
+  0%{ background-position: 0 130%; }
+  55%,100%{ background-position: 0 -130%; }
+}
+
+.intro-en{
+  margin-top: 14px;
+  font-family: var(--mono);
+  font-size: clamp(8px, .85vw, 10px);
+  letter-spacing: .42em;
+  color: rgba(150, 185, 225, .48);
+}
+.intro-lede{
+  max-width: 560px;
+  margin-top: 17px;
+  font-size: 12.5px;
+  line-height: 1.9;
+  letter-spacing: .08em;
+  color: rgba(175, 196, 224, .62);
+  text-wrap: balance;
+}
+
+.intro-actions{
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  gap: 14px;
+  margin-top: 38px;
+}
+.portal-btn{
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  width: 218px;
+  padding: 15px 22px 14px;
+  overflow: hidden;
+  border: 1px solid rgba(150, 195, 255, .19);
+  border-radius: 2px;
+  background: linear-gradient(135deg, rgba(14, 26, 48, .62), rgba(5, 10, 20, .4));
+  clip-path: polygon(0 0, calc(100% - 15px) 0, 100% 15px, 100% 100%, 15px 100%, 0 calc(100% - 15px));
+  text-align: left;
+  transition: border-color .3s, background .3s, box-shadow .3s, transform .3s;
+}
+.portal-btn::before{
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(115deg, transparent 28%, rgba(160, 220, 255, .12) 49%, transparent 70%);
+  transform: translateX(-120%);
+  transition: transform .75s cubic-bezier(.2, .7, .2, 1);
+  pointer-events: none;
+}
+.portal-btn::after{
+  content: "↗";
+  position: absolute;
+  right: 16px;
+  bottom: 12px;
+  font-family: var(--mono);
+  font-size: 13px;
+  color: rgba(160, 215, 255, .4);
+  transition: color .3s, transform .3s;
+}
+.portal-btn:hover{
+  border-color: rgba(143, 220, 255, .52);
+  background: linear-gradient(135deg, rgba(22, 40, 70, .72), rgba(8, 15, 29, .5));
+  box-shadow: 0 0 34px rgba(110, 168, 255, .1), inset 0 0 26px rgba(110, 168, 255, .04);
+  transform: translateY(-2px);
+}
+.portal-btn:hover::before{ transform: translateX(120%); }
+.portal-btn:hover::after{ color: #dff2ff; transform: translate(2px, -2px); }
+.portal-no{
+  font-family: var(--mono);
+  font-size: 8px;
+  letter-spacing: .16em;
+  color: rgba(143, 220, 255, .48);
+}
+.portal-name{
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: .2em;
+  color: #e8f3ff;
+}
+.portal-en{
+  font-family: var(--mono);
+  font-size: 7.5px;
+  letter-spacing: .24em;
+  color: rgba(143, 168, 200, .45);
+}
+.portal-char .portal-no{ color: rgba(195, 155, 255, .5); }
+.portal-char:hover{
+  border-color: rgba(195, 155, 255, .5);
+  box-shadow: 0 0 34px rgba(180, 140, 255, .1), inset 0 0 26px rgba(180, 140, 255, .04);
+}
+
+.intro-foot{
+  position: fixed;
+  left: 50%;
+  bottom: calc(24px + env(safe-area-inset-bottom));
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  transform: translateX(-50%);
+  font-size: 9.5px;
+  letter-spacing: .2em;
+  color: rgba(145, 170, 204, .42);
+  pointer-events: none;
+  white-space: nowrap;
+}
+.pulse-dot{
+  width: 4px; height: 4px;
+  border-radius: 50%;
+  background: #8fdcff;
+  box-shadow: 0 0 8px rgba(143, 220, 255, .8);
+  animation: pulseDot 3.4s ease-in-out infinite;
+}
+@keyframes pulseDot{
+  0%,100%{ opacity: .35; transform: scale(.8); }
+  50%{ opacity: 1; transform: scale(1.2); }
+}
+
+/* ============================================================
+   通用顶栏
+   ============================================================ */
+
+.topbar{
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 15px 28px;
+  background: linear-gradient(180deg, rgba(3, 7, 15, .86), rgba(3, 7, 15, .48) 70%, transparent);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+.topbar-left{
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  min-width: 0;
+}
+.bar-divider{
+  width: 1px;
+  height: 28px;
+  background: rgba(150, 185, 240, .13);
+}
+.topbar-heading{ min-width: 0; }
+.topbar-heading h1{
+  margin-top: 1px;
+  font-family: var(--serif);
+  font-size: 23px;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: .14em;
+  color: #edf5ff;
+  text-shadow: 0 0 24px rgba(110, 168, 255, .15);
+  white-space: nowrap;
+}
+
+/* ============================================================
+   编年史 · Chronicle
+   ============================================================ */
+
+.page-chronicle{ background: #02050c; }
+.chron-bg{
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(900px 680px at 50% 48%, rgba(24, 52, 105, .24), transparent 65%),
+    radial-gradient(700px 540px at 16% 15%, rgba(40, 36, 115, .14), transparent 68%),
+    radial-gradient(760px 580px at 86% 78%, rgba(84, 55, 110, .12), transparent 70%),
+    linear-gradient(180deg, #02040a, #040914 52%, #02050c);
+}
+.chron-canvas{
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  cursor: default;
+  touch-action: manipulation;
+}
+.chron-canvas.is-pointer{ cursor: pointer; }
+.chron-canvas:focus-visible{
+  outline: 1px solid rgba(143, 220, 255, .48);
+  outline-offset: -4px;
+}
+.chron-glow{
+  position: fixed;
+  left: 50%; top: 51%;
+  z-index: 0;
+  width: min(62vw, 720px);
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(62, 120, 210, .12), rgba(70, 55, 160, .05) 42%, transparent 68%);
+  filter: blur(28px);
+  pointer-events: none;
+  animation: sphereGlow 12s ease-in-out infinite;
+}
+@keyframes sphereGlow{
+  0%,100%{ opacity: .55; transform: translate(-50%, -50%) scale(.96); }
+  50%{ opacity: .9; transform: translate(-50%, -50%) scale(1.03); }
+}
+
+.chron-bar{
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 12;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 14px 28px;
+  background: linear-gradient(180deg, rgba(3, 7, 15, .9), rgba(3, 7, 15, .56) 72%, transparent);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+.chron-left{
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  min-width: 0;
+}
+.chron-right{
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  min-width: 0;
+}
+.part-filters{
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 3px;
+  border: 1px solid rgba(150, 185, 240, .12);
+  border-radius: 999px;
+  background: rgba(5, 10, 20, .5);
+  backdrop-filter: blur(8px);
+}
+.part-btn{
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  color: #8ca1bf;
+  font-size: 11.5px;
+  letter-spacing: .04em;
+  white-space: nowrap;
+  transition: color .25s, background .25s, border-color .25s;
+}
+.part-btn i{
+  width: 4px; height: 4px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--pc, #8fdcff);
+  box-shadow: 0 0 6px color-mix(in srgb, var(--pc, #8fdcff) 60%, transparent);
+  opacity: .65;
+  transition: opacity .25s, box-shadow .25s;
+}
+.part-btn:hover{ color: #d9e8fb; background: rgba(150, 185, 240, .05); }
+.part-btn.is-active{
+  color: #ffffff;
+  border-color: color-mix(in srgb, var(--pc, #8fdcff) 40%, transparent);
+  background: color-mix(in srgb, var(--pc, #8fdcff) 13%, transparent);
+}
+.part-btn.is-active i{ opacity: 1; box-shadow: 0 0 9px var(--pc, #8fdcff); }
+
+.chron-search{
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 252px;
+  height: 37px;
+  padding: 0 6px 0 11px;
+  border: 1px solid rgba(150, 185, 240, .14);
+  border-radius: 9px;
+  background: rgba(5, 10, 20, .55);
+  transition: border-color .3s, box-shadow .3s, background .3s;
+}
+.chron-search:focus-within{
+  border-color: rgba(143, 220, 255, .38);
+  background: rgba(7, 14, 27, .78);
+  box-shadow: 0 0 0 3px rgba(110, 168, 255, .07);
+}
+.chron-search svg{
+  width: 14px; height: 14px;
+  flex: none;
+  color: #6c82a3;
+}
+.chron-search input{
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  border: 0;
+  outline: none;
+  background: transparent;
+  font-size: 12.5px;
+  letter-spacing: .02em;
+  color: #eaf3ff;
+}
+.chron-search input::placeholder{ color: #667b99; }
+.chron-search input::-webkit-search-cancel-button{ -webkit-appearance: none; appearance: none; }
+.search-clear{
+  width: 22px; height: 22px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: 5px;
+  color: #8399b8;
+  font-size: 15px;
+  line-height: 1;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .2s, color .2s, background .2s;
+}
+.search-clear:hover{ color: #fff; background: rgba(150, 185, 240, .08); }
+.chron-search.has-query .search-clear{ opacity: 1; pointer-events: auto; }
+
+.chron-meta{
+  position: fixed;
+  left: 28px;
+  bottom: 22px;
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: .1em;
+  color: #7086a6;
+  pointer-events: none;
+}
+.chron-meta .meta-sep{ color: #3b4d67; }
+#chronCount{ color: #a7c2e2; }
+#searchState{ color: #7d93b3; }
+.chron-meta .searching{ color: var(--cyan); }
+
+.chron-legend{
+  position: fixed;
+  right: 28px;
+  bottom: 22px;
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: .06em;
+  color: #7288a8;
+  pointer-events: none;
+}
+.chron-legend span{ display: inline-flex; align-items: center; gap: 5px; }
+.chron-legend i{
+  width: 4px; height: 4px;
+  border-radius: 50%;
+  background: var(--pc, #8fdcff);
+  box-shadow: 0 0 6px var(--pc, #8fdcff);
+}
+.chron-hint{
+  position: fixed;
+  left: 50%;
+  bottom: 22px;
+  z-index: 6;
+  transform: translateX(-50%);
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: .1em;
+  color: #566b88;
+  pointer-events: none;
+  white-space: nowrap;
+}
+.hint-touch{ display: none; }
+
+.star-tip{
+  position: fixed;
+  z-index: 22;
+  left: 0; top: 0;
+  min-width: 148px;
+  max-width: 270px;
+  padding: 9px 12px 10px;
+  border: 1px solid rgba(160, 200, 255, .2);
+  border-radius: 9px;
+  background: rgba(5, 11, 22, .92);
+  box-shadow: 0 16px 42px rgba(0, 0, 0, .42), 0 0 24px rgba(110, 168, 255, .06);
+  backdrop-filter: blur(12px);
+  opacity: 0;
+  transform: translate(-50%, calc(-100% - 14px));
+  pointer-events: none;
+  transition: opacity .18s ease;
+}
+.star-tip.is-visible{ opacity: 1; }
+.tip-part{
+  display: block;
+  margin-bottom: 4px;
+  font-family: var(--mono);
+  font-size: 7.5px;
+  letter-spacing: .12em;
+  color: var(--tip-color, #8fdcff);
+}
+.tip-title{
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.5;
+  letter-spacing: .02em;
+  color: #f1f7ff;
+}
+.tip-people{
+  display: block;
+  margin-top: 3px;
+  font-size: 9.5px;
+  line-height: 1.5;
+  color: #859bb9;
+}
+
+.focus-layer{
+  position: fixed;
+  inset: 0;
+  z-index: 8;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 20px 60px;
+  opacity: 0;
+  pointer-events: none;
+  text-align: center;
+}
+.focus-layer::before{
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  z-index: 0;
+  width: min(64vw, 580px);
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: radial-gradient(circle, color-mix(in srgb, var(--focus-color, #8fdcff) 14%, transparent), transparent 62%);
+  filter: blur(24px);
+  opacity: 0;
+  transition: opacity .7s ease;
+  pointer-events: none;
+}
+.focus-layer.is-focused::before{ opacity: .85; }
+.focus-meta,
+.focus-title,
+.focus-hint{ position: relative; z-index: 1; }
+.focus-layer.is-visible{ pointer-events: none; }
+.focus-layer.is-focused{ pointer-events: none; }
+.focus-meta{
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 12px;
+  font-family: var(--mono);
+  font-size: 8.5px;
+  letter-spacing: .16em;
+  color: #8298b8;
+  text-transform: uppercase;
+}
+.focus-part{ color: var(--focus-color, #8fdcff); }
+.focus-year{ color: #617694; }
+.focus-title{
+  position: relative;
+  max-width: min(880px, 88vw);
+  padding: 6px 10px 10px;
+  color: #f2f8ff;
+  font-size: clamp(28px, 4.7vw, 52px);
+  font-weight: 800;
+  line-height: 1.35;
+  letter-spacing: .06em;
+  text-shadow: 0 0 34px rgba(110, 168, 255, .2), 0 2px 24px rgba(0, 0, 0, .8);
+  transition: color .3s, text-shadow .3s, letter-spacing .35s;
+}
+.focus-layer.is-focused .focus-title{ pointer-events: auto; }
+.focus-title::after{
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: 2px;
+  width: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--focus-color, #8fdcff), transparent);
+  transform: translateX(-50%);
+  transition: width .4s ease;
+}
+.focus-title:hover{
+  color: #ffffff;
+  letter-spacing: .075em;
+  text-shadow: 0 0 46px rgba(143, 220, 255, .38), 0 2px 24px rgba(0, 0, 0, .8);
+}
+.focus-title:hover::after{ width: 82%; }
+.focus-title:focus,
+.focus-title:focus-visible{
+  outline: none;
+  color: #ffffff;
+  text-shadow: 0 0 44px rgba(143, 220, 255, .3), 0 2px 24px rgba(0, 0, 0, .8);
+}
+.focus-title.is-flashing{ animation: focusFlash .32s steps(2, end) 1; }
+@keyframes focusFlash{
+  0%{ opacity: 1; transform: translateX(0); }
+  22%{ opacity: .25; transform: translateX(-4px); }
+  45%{ opacity: .9; transform: translateX(3px); }
+  70%{ opacity: .3; transform: translateX(-2px); }
+  100%{ opacity: 1; transform: translateX(0); }
+}
+.focus-hint{
+  display: inline-flex;
+  align-items: center;
+  margin-top: 15px;
+  padding: 4px 10px;
+  border: 1px solid rgba(150, 185, 240, .13);
+  border-radius: 999px;
+  background: rgba(5, 11, 22, .62);
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: .1em;
+  color: #9fb5d2;
+  opacity: 0;
+  transition: opacity .35s .05s;
+}
+.focus-layer.is-focused .focus-hint{ opacity: 1; }
+
+.detail-layer{
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(2, 5, 12, .6);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity .4s ease, visibility .4s ease;
+}
+.detail-layer.is-open{
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+.event-card{
+  --accent: #8fdcff;
+  --accent-rgb: 143, 220, 255;
+  position: relative;
+  width: min(700px, 94vw);
+  max-height: 86vh;
+  max-height: 86dvh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 32px 34px 36px;
+  border: 1px solid color-mix(in srgb, var(--accent) 32%, transparent);
+  border-radius: 16px;
+  background:
+    linear-gradient(155deg, rgba(13, 24, 44, .96), rgba(5, 11, 22, .97) 70%);
+  box-shadow:
+    0 30px 90px rgba(0, 0, 0, .58),
+    0 0 60px color-mix(in srgb, var(--accent) 10%, transparent),
+    inset 0 1px 0 rgba(255, 255, 255, .05);
+  opacity: 0;
+  transform: translateY(16px) scale(.97);
+  transition: opacity .38s ease, transform .45s cubic-bezier(.2, .8, .2, 1);
+}
+.detail-layer.is-open .event-card{ opacity: 1; transform: none; }
+.event-card::before{
+  content: "";
+  position: absolute;
+  left: 0; top: 28px; bottom: 28px;
+  width: 2px;
+  border-radius: 2px;
+  background: linear-gradient(180deg, var(--accent), transparent);
+  opacity: .8;
+}
+.card-close,
+.stage-close{
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 11px;
+  border: 1px solid rgba(150, 185, 240, .18);
+  border-radius: 999px;
+  background: rgba(5, 11, 22, .65);
+  color: #a4b9d7;
+  font-size: 10px;
+  letter-spacing: .08em;
+  transition: color .25s, border-color .25s, background .25s;
+}
+.card-close span,
+.stage-close span{ font-size: 14px; line-height: 1; color: #d6e6fb; }
+.card-close:hover,
+.stage-close:hover{
+  color: #ffffff;
+  border-color: rgba(143, 220, 255, .42);
+  background: rgba(143, 220, 255, .08);
+}
+
+.event-tags{
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+.part-tag,
+.year-tag{
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  border: 1px solid color-mix(in srgb, var(--accent) 28%, transparent);
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: .06em;
+  color: var(--accent);
+}
+.year-tag{
+  border-color: rgba(150, 185, 240, .14);
+  background: rgba(150, 185, 240, .04);
+  color: #90a6c3;
+}
+.event-card h2{
+  margin-top: 16px;
+  padding-right: 74px;
+  font-family: var(--sans);
+  font-size: clamp(24px, 3.1vw, 32px);
+  font-weight: 800;
+  line-height: 1.35;
+  letter-spacing: .03em;
+  color: #f4f9ff;
+}
+.event-people{
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 13px;
+}
+.people-label{
+  margin-right: 2px;
+  font-family: var(--mono);
+  font-size: 8.5px;
+  letter-spacing: .12em;
+  color: #7389a8;
+}
+.person-chip{
+  display: inline-block;
+  padding: 3px 9px;
+  border: 1px solid rgba(150, 185, 240, .14);
+  border-radius: 999px;
+  background: rgba(150, 185, 240, .05);
+  font-size: 10px;
+  line-height: 1.6;
+  color: #b8cbe4;
+  white-space: nowrap;
+}
+.event-card-body{ margin-top: 25px; }
+.event-section{
+  display: grid;
+  grid-template-columns: 88px minmax(0, 1fr);
+  gap: 14px;
+  padding: 15px 0;
+  border-top: 1px solid rgba(150, 185, 240, .09);
+}
+.event-label{
+  padding-top: 2px;
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: .12em;
+  color: #7e95b5;
+}
+.event-section p{
+  font-size: 13.5px;
+  line-height: 1.95;
+  color: #bdcee3;
+  text-align: justify;
+}
+.event-section:last-child p{ color: #c7d5e8; }
+
+/* ============================================================
+   编年史双视图 · 星空 / 时间线
+   ============================================================ */
+
+.chron-canvas{
+  transition: opacity .5s ease, visibility .5s ease;
+}
+.chron-meta,
+.chron-legend,
+.chron-hint{
+  transition: opacity .4s ease, visibility .4s ease;
+}
+
+.view-switch{
+  position: fixed;
+  left: 50%;
+  top: calc(var(--chron-header, 74px) + 14px);
+  z-index: 11;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid rgba(150, 185, 240, .16);
+  border-radius: 999px;
+  background: rgba(5, 11, 22, .78);
+  box-shadow: 0 12px 34px rgba(0, 0, 0, .32);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  transform: translateX(-50%);
+}
+.view-btn{
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  color: #7f94b2;
+  font-size: 10px;
+  letter-spacing: .04em;
+  white-space: nowrap;
+  transition: color .25s, border-color .25s, background .25s, box-shadow .25s;
+}
+.view-btn:hover{ color: #dceafb; background: rgba(150, 185, 240, .05); }
+.view-btn.is-active{
+  color: #f2f9ff;
+  border-color: rgba(143, 220, 255, .38);
+  background: rgba(143, 220, 255, .1);
+  box-shadow: 0 0 24px rgba(110, 168, 255, .08);
+}
+.view-icon{
+  font-family: var(--mono);
+  font-size: 11px;
+  color: #8fdcff;
+  opacity: .9;
+}
+.view-btn[data-view="timeline"] .view-icon{ color: #c9a7ff; }
+.mode-word{ margin-left: 0; }
+
+.page-chronicle.is-timeline-view .chron-canvas,
+.page-chronicle.is-timeline-view .chron-glow,
+.page-chronicle.is-timeline-view .star-tip,
+.page-chronicle.is-timeline-view .focus-layer,
+.page-chronicle.is-timeline-view .detail-layer,
+.page-chronicle.is-timeline-view .chron-meta,
+.page-chronicle.is-timeline-view .chron-legend,
+.page-chronicle.is-timeline-view .chron-hint{
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+.page-chronicle.is-timeline-view .chron-glow{ animation: none; }
+
+.timeline-view{
+  position: fixed;
+  top: var(--chron-header, 74px);
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 5;
+  display: grid;
+  grid-template-columns: minmax(0, 1.04fr) minmax(360px, .96fr);
+  padding-top: 64px;
+  overflow: hidden;
+  background:
+    radial-gradient(780px 620px at 20% 10%, rgba(30, 62, 135, .18), transparent 62%),
+    radial-gradient(700px 600px at 86% 80%, rgba(64, 38, 100, .1), transparent 68%),
+    linear-gradient(180deg, rgba(3, 7, 15, .97), rgba(2, 5, 12, .99));
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translateY(12px);
+  transition: opacity .45s ease, transform .45s ease, visibility .45s ease;
+}
+.page-chronicle.is-timeline-view .timeline-view{
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transform: none;
+}
+
+.timeline-list-wrap{
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 0 12px 0 30px;
+}
+.timeline-list-head{
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 8px 14px;
+  border-bottom: 1px solid rgba(150, 185, 240, .12);
+}
+.timeline-heading{
+  margin-top: 4px;
+  font-family: var(--serif);
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: .12em;
+  color: #e8f1ff;
+}
+.timeline-heading em{
+  margin-left: 8px;
+  font-family: var(--mono);
+  font-size: 8.5px;
+  font-style: normal;
+  font-weight: 400;
+  letter-spacing: .06em;
+  color: #7b91b0;
+}
+.timeline-head-hint{
+  font-family: var(--mono);
+  font-size: 8px;
+  letter-spacing: .05em;
+  color: #5f7594;
+  white-space: nowrap;
+}
+.timeline-scroll{
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 14px 8px 50px 0;
+  scrollbar-width: thin;
+  scrollbar-color: #213550 transparent;
+}
+.timeline-list{
+  position: relative;
+  margin: 0;
+  padding: 0 0 36px;
+  list-style: none;
+}
+.timeline-list::before{
+  content: "";
+  position: absolute;
+  left: 23px;
+  top: 4px;
+  bottom: 22px;
+  width: 1px;
+  background: linear-gradient(180deg,
+    rgba(143, 220, 255, .35),
+    rgba(126, 158, 208, .13) 12%,
+    rgba(126, 158, 208, .13) 88%,
+    transparent 100%);
+}
+.tl-row{
+  position: relative;
+  margin: 0 0 4px;
+}
+.tl-row.is-hidden{ display: none; }
+.tl-row.is-dim .tl-item{ opacity: .28; }
+.tl-item{
+  position: relative;
+  display: block;
+  width: 100%;
+  padding: 9px 12px 10px 50px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  transition: background .25s, border-color .25s, transform .25s;
+}
+.tl-item:hover{
+  background: rgba(150, 185, 240, .05);
+  border-color: rgba(150, 185, 240, .1);
+  transform: translateX(2px);
+}
+.tl-node{
+  position: absolute;
+  left: 18px;
+  top: 21px;
+  width: 11px;
+  height: 11px;
+  border: 1px solid var(--pc, #8fdcff);
+  border-radius: 50%;
+  background: #050b16;
+  box-shadow: 0 0 0 4px rgba(150, 185, 240, .035);
+  transition: background .25s, box-shadow .25s;
+}
+.tl-body{ display: block; }
+.tl-top{
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 3px;
+}
+.tl-year{
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: .03em;
+  color: var(--pc, #8fdcff);
+}
+.tl-part{
+  font-size: 8.5px;
+  letter-spacing: .03em;
+  color: #6b81a0;
+}
+.tl-title{
+  display: block;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: #d4e2f4;
+  letter-spacing: .01em;
+}
+.tl-row.is-active .tl-item{
+  border-color: color-mix(in srgb, var(--pc, #8fdcff) 38%, transparent);
+  background: color-mix(in srgb, var(--pc, #8fdcff) 9%, transparent);
+}
+.tl-row.is-active .tl-node{
+  background: var(--pc, #8fdcff);
+  box-shadow: 0 0 14px var(--pc, #8fdcff), 0 0 0 4px rgba(150, 185, 240, .06);
+}
+.tl-row.is-match .tl-item{
+  border-color: rgba(242, 200, 121, .4);
+  background: rgba(242, 200, 121, .035);
+}
+.tl-row.is-match .tl-title{ color: #fff5d7; }
+.tl-row.is-match .tl-node{
+  border-color: var(--gold);
+  box-shadow: 0 0 12px rgba(242, 200, 121, .55);
+}
+
+.timeline-panel{
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  padding: 26px 30px 34px;
+  border-left: 1px solid rgba(150, 185, 240, .1);
+  background: linear-gradient(150deg, rgba(9, 18, 33, .7), rgba(4, 9, 18, .82));
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.timeline-empty{
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  text-align: center;
+}
+.timeline-empty[hidden]{ display: none; }
+.timeline-empty-mark{
+  font-size: 30px;
+  color: rgba(143, 220, 255, .3);
+  text-shadow: 0 0 28px rgba(143, 220, 255, .2);
+}
+.timeline-empty p{
+  font-family: var(--serif);
+  font-size: 19px;
+  letter-spacing: .1em;
+  color: #c5d7ec;
+}
+.timeline-empty span:last-child{
+  max-width: 290px;
+  font-size: 10.5px;
+  line-height: 1.9;
+  color: #657b99;
+}
+.timeline-close{
+  position: absolute;
+  top: 18px;
+  right: 22px;
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 11px;
+  border: 1px solid rgba(150, 185, 240, .16);
+  border-radius: 999px;
+  background: rgba(5, 11, 22, .72);
+  color: #a4b9d7;
+  font-size: 9.5px;
+  letter-spacing: .06em;
+  transition: color .25s, border-color .25s, background .25s;
+}
+.timeline-close span{ font-size: 14px; line-height: 1; color: #d6e6fb; }
+.timeline-close:hover{
+  color: #fff;
+  border-color: rgba(143, 220, 255, .4);
+  background: rgba(143, 220, 255, .08);
+}
+.timeline-close[hidden]{ display: none; }
+
+.timeline-detail{
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 4px 4px 24px 0;
+  --accent: #8fdcff;
+  --accent-rgb: 143, 220, 255;
+  animation: tlDetailIn .4s ease both;
+}
+.timeline-detail[hidden]{ display: none; }
+@keyframes tlDetailIn{
+  from{ opacity: 0; transform: translateY(9px); }
+  to{ opacity: 1; transform: none; }
+}
+.tl-detail-eyebrow{
+  margin-bottom: 13px;
+  font-family: var(--mono);
+  font-size: 8px;
+  letter-spacing: .18em;
+  color: #6f85a4;
+}
+.timeline-detail h2{
+  margin-top: 15px;
+  padding-right: 76px;
+  font-size: clamp(24px, 2.4vw, 32px);
+  font-weight: 800;
+  line-height: 1.35;
+  letter-spacing: .03em;
+  color: #f4f9ff;
+}
+.timeline-detail .event-people{ margin-top: 13px; }
+.timeline-detail .event-card-body{ margin-top: 22px; }
+.timeline-detail .event-section{
+  grid-template-columns: 86px minmax(0, 1fr);
+  gap: 14px;
+}
+.timeline-detail .event-section p{
+  font-size: 13px;
+  line-height: 1.95;
+  color: #b7c8df;
+}
+.timeline-detail .event-section:last-child p{ color: #c7d5e8; }
+.timeline-scrim{
+  display: none;
+}
+
+/* ============================================================
+   人物长廊 · Characters
+   ============================================================ */
+
+.page-characters{
+  background:
+    radial-gradient(1000px 700px at 78% 10%, rgba(34, 55, 112, .24), transparent 64%),
+    radial-gradient(900px 700px at 10% 80%, rgba(64, 35, 105, .15), transparent 66%),
+    linear-gradient(180deg, #02050c, #040914 55%, #02050b);
+}
+.characters-bg{
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+.characters-bg::before{
+  content: "";
+  position: absolute;
+  inset: -20%;
+  background:
+    radial-gradient(1px 1px at 18% 26%, rgba(225, 240, 255, .5), transparent 100%),
+    radial-gradient(1px 1px at 72% 18%, rgba(200, 225, 255, .38), transparent 100%),
+    radial-gradient(1.5px 1.5px at 84% 62%, rgba(220, 235, 255, .42), transparent 100%),
+    radial-gradient(1px 1px at 31% 74%, rgba(200, 220, 255, .36), transparent 100%),
+    radial-gradient(1px 1px at 55% 42%, rgba(235, 245, 255, .28), transparent 100%),
+    radial-gradient(1.5px 1.5px at 9% 55%, rgba(190, 215, 255, .3), transparent 100%),
+    radial-gradient(1px 1px at 64% 86%, rgba(220, 235, 255, .3), transparent 100%),
+    radial-gradient(1px 1px at 92% 32%, rgba(220, 235, 255, .32), transparent 100%);
+  opacity: .65;
+}
+.characters-bg::after{
+  content: "";
+  position: absolute;
+  left: -10%;
+  top: 12%;
+  width: 120%;
+  height: 30%;
+  background: linear-gradient(90deg, transparent, rgba(80, 140, 235, .06) 35%, rgba(150, 190, 255, .1) 50%, rgba(80, 140, 235, .04) 65%, transparent);
+  transform: rotate(-8deg);
+  filter: blur(40px);
+}
+.char-dust{
+  position: absolute;
+  width: 2px; height: 2px;
+  border-radius: 50%;
+  background: rgba(210, 230, 255, .6);
+  box-shadow: 0 0 6px rgba(180, 215, 255, .4);
+  opacity: .35;
+}
+.char-beam{
+  position: absolute;
+  width: 1px;
+  height: 74vh;
+  top: 8vh;
+  background: linear-gradient(180deg, transparent, rgba(120, 175, 255, .18), transparent);
+  filter: blur(1px);
+  opacity: .4;
+}
+.char-beam.beam-a{ left: 17%; transform: rotate(12deg); }
+.char-beam.beam-b{ left: 74%; transform: rotate(-15deg); opacity: .28; }
+
+.char-bar{
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 15px 28px;
+  background: linear-gradient(180deg, rgba(3, 7, 15, .86), rgba(3, 7, 15, .36) 72%, transparent);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+.char-left{
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  min-width: 0;
+}
+.char-right{
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: .08em;
+  color: #7b91b0;
+  white-space: nowrap;
+}
+.char-count{ color: #aec6e5; }
+.char-hint{ color: #566b88; }
+
+.lane-head{
+  position: fixed;
+  left: 7vw;
+  top: calc(var(--bar-h) + 26px);
+  z-index: 3;
+  pointer-events: none;
+}
+.lane-kicker{
+  font-family: var(--mono);
+  font-size: 8px;
+  letter-spacing: .24em;
+  color: #5f7696;
+}
+.lane-line{
+  margin-top: 8px;
+  font-family: var(--serif);
+  font-size: clamp(17px, 2vw, 23px);
+  letter-spacing: .12em;
+  color: #c9d9ef;
+  text-shadow: 0 0 30px rgba(110, 168, 255, .12);
+}
+
+.lane-wrap{
+  position: fixed;
+  left: 0; right: 0;
+  top: calc(var(--bar-h) + 90px);
+  bottom: 74px;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+}
+.lane-wrap::before{
+  content: "";
+  position: absolute;
+  left: 5vw;
+  right: 5vw;
+  top: 50%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(130, 180, 255, .18) 24%, rgba(150, 200, 255, .2) 50%, rgba(130, 180, 255, .16) 76%, transparent);
+  pointer-events: none;
+}
+.character-lane{
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  width: 100%;
+  height: 100%;
+  padding: 18px max(6vw, calc((100vw - 1180px) / 2)) 30px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  outline: none;
+  cursor: default;
+}
+.character-lane::-webkit-scrollbar{ display: none; }
+.character-lane.is-locked{ overflow: hidden; pointer-events: none; }
+.character-lane::before,
+.character-lane::after{
+  content: "";
+  flex: 0 0 1px;
+}
+
+.char-card{
+  position: relative;
+  flex: 0 0 auto;
+  width: clamp(198px, 17.5vw, 252px);
+  height: min(50vh, 400px);
+  min-height: 296px;
+  overflow: hidden;
+  border: 1px solid rgba(150, 185, 240, .14);
+  border-radius: 13px;
+  background: linear-gradient(170deg, rgba(13, 24, 44, .82), rgba(5, 11, 22, .9));
+  box-shadow: 0 18px 44px rgba(0, 0, 0, .28);
+  scroll-snap-align: center;
+  text-align: left;
+  transition: transform .35s cubic-bezier(.2, .7, .2, 1), border-color .35s, box-shadow .35s, filter .35s, opacity .35s;
+}
+.char-card:hover{
+  transform: translateY(-7px);
+  border-color: color-mix(in srgb, var(--accent) 48%, transparent);
+  filter: brightness(1.08);
+  box-shadow: 0 24px 54px rgba(0, 0, 0, .36), 0 0 32px color-mix(in srgb, var(--accent) 10%, transparent);
+}
+.char-card:hover .char-portrait{ transform: scale(1.035); }
+.char-card:hover .char-open-hint{ opacity: 1; transform: none; }
+.char-card.is-away{
+  opacity: .18;
+  filter: grayscale(.5);
+  transform: scale(.96);
+}
+.char-card .portrait{ position: absolute; inset: 0; }
+
+.char-portrait{
+  position: absolute;
+  inset: 0;
+  transition: transform .6s cubic-bezier(.2, .7, .2, 1);
+  will-change: transform;
+}
+.portrait{
+  --accent: #8fdcff;
+  --accent-rgb: 143, 220, 255;
+  position: relative;
+  overflow: hidden;
+  background:
+    radial-gradient(ellipse at 50% 34%, rgba(var(--accent-rgb), .18), transparent 58%),
+    linear-gradient(180deg, #0a1322, #040912 78%);
+}
+.portrait::after{
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, transparent 52%, rgba(3, 7, 15, .24) 70%, rgba(3, 7, 15, .9) 100%);
+  pointer-events: none;
+}
+.portrait-img{
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 20%;
+  opacity: 0;
+  filter: saturate(.82) contrast(1.04);
+  transition: opacity .5s ease;
+}
+.portrait-img.is-loaded{ opacity: 1; }
+.portrait-fallback{
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  overflow: hidden;
+}
+.portrait-glyph{
+  position: absolute;
+  left: 50%;
+  top: 47%;
+  transform: translate(-50%, -50%);
+  font-family: var(--sans);
+  font-size: 142px;
+  font-weight: 900;
+  line-height: 1;
+  color: color-mix(in srgb, var(--accent) 9%, transparent);
+  text-shadow: 0 0 48px color-mix(in srgb, var(--accent) 8%, transparent);
+  user-select: none;
+}
+.silhouette-head{
+  position: absolute;
+  left: 50%;
+  top: 20%;
+  width: 28%;
+  aspect-ratio: .84;
+  transform: translateX(-50%);
+  border-radius: 48% 48% 44% 44%;
+  background:
+    radial-gradient(circle at 34% 24%, rgba(var(--accent-rgb), .25), transparent 36%),
+    linear-gradient(150deg, rgba(var(--accent-rgb), .16), rgba(8, 14, 25, .96) 52%, #040811);
+  box-shadow:
+    inset 0 0 26px rgba(0, 0, 0, .6),
+    inset 1px 0 0 color-mix(in srgb, var(--accent) 26%, transparent),
+    0 0 0 1px color-mix(in srgb, var(--accent) 18%, transparent),
+    0 0 46px color-mix(in srgb, var(--accent) 11%, transparent);
+}
+.silhouette-body{
+  width: 59%;
+  height: 32%;
+  border-radius: 48% 48% 0 0;
+  background:
+    radial-gradient(ellipse at 32% 0%, rgba(var(--accent-rgb), .2), transparent 44%),
+    linear-gradient(180deg, rgba(var(--accent-rgb), .12), rgba(4, 8, 16, .97) 52%, #03070f);
+  box-shadow:
+    inset 0 14px 34px rgba(0, 0, 0, .58),
+    inset 1px 0 0 color-mix(in srgb, var(--accent) 18%, transparent),
+    0 0 0 1px color-mix(in srgb, var(--accent) 12%, transparent);
+}
+.portrait-halo{
+  position: absolute;
+  left: 50%;
+  top: 35%;
+  width: 62%;
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+  border: 1px solid color-mix(in srgb, var(--accent) 17%, transparent);
+  border-radius: 50%;
+  box-shadow: 0 0 42px color-mix(in srgb, var(--accent) 7%, transparent), inset 0 0 32px color-mix(in srgb, var(--accent) 4%, transparent);
+}
+.portrait-halo::before,
+.portrait-halo::after{
+  content: "";
+  position: absolute;
+  border-radius: 50%;
+  border: 1px solid color-mix(in srgb, var(--accent) 9%, transparent);
+}
+.portrait-halo::before{ inset: 9%; }
+.portrait-halo::after{ inset: 22%; }
+.portrait-scan{
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  background: repeating-linear-gradient(180deg, transparent 0 4px, rgba(180, 215, 255, .025) 4px 5px);
+  mix-blend-mode: screen;
+  pointer-events: none;
+}
+.portrait-index{
+  position: absolute;
+  z-index: 4;
+  top: 12px;
+  left: 12px;
+  font-family: var(--mono);
+  font-size: 8px;
+  letter-spacing: .08em;
+  color: rgba(190, 215, 245, .55);
+  text-shadow: 0 1px 4px rgba(0, 0, 0, .8);
+}
+.char-card-body{
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  z-index: 5;
+  padding: 16px 14px 14px;
+  background: linear-gradient(180deg, transparent, rgba(3, 7, 15, .72) 42%, rgba(3, 7, 15, .96));
+}
+.char-part{
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--mono);
+  font-size: 7.5px;
+  letter-spacing: .1em;
+  color: color-mix(in srgb, var(--accent) 82%, #ffffff);
+}
+.char-part i{
+  width: 3px; height: 3px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 6px var(--accent);
+}
+.char-name{
+  display: block;
+  margin-top: 5px;
+  font-family: var(--serif);
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1.25;
+  letter-spacing: .08em;
+  color: #f3f8ff;
+}
+.char-honor{
+  display: block;
+  margin-top: 3px;
+  overflow: hidden;
+  font-size: 10px;
+  line-height: 1.5;
+  letter-spacing: .03em;
+  color: color-mix(in srgb, var(--accent) 46%, #b6c9e2);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.char-open-hint{
+  position: absolute;
+  z-index: 6;
+  right: 13px;
+  bottom: 12px;
+  font-family: var(--mono);
+  font-size: 7.5px;
+  letter-spacing: .08em;
+  color: color-mix(in srgb, var(--accent) 85%, #ffffff);
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity .3s, transform .3s;
+}
+.char-open-hint span{ margin-left: 3px; }
+
+.lane-arrow{
+  position: absolute;
+  top: 50%;
+  z-index: 4;
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(150, 185, 240, .16);
+  border-radius: 50%;
+  background: rgba(5, 11, 22, .72);
+  color: #8fa6c5;
+  font-family: var(--mono);
+  font-size: 13px;
+  transform: translateY(-50%);
+  backdrop-filter: blur(8px);
+  transition: color .25s, border-color .25s, background .25s;
+}
+.lane-arrow:hover{
+  color: #ffffff;
+  border-color: rgba(143, 220, 255, .4);
+  background: rgba(143, 220, 255, .08);
+}
+.lane-arrow:disabled{ opacity: .18; pointer-events: none; }
+.lane-prev{ left: 14px; }
+.lane-next{ right: 14px; }
+
+.lane-foot{
+  position: fixed;
+  left: 7vw;
+  right: 7vw;
+  bottom: 24px;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  font-family: var(--mono);
+  font-size: 8.5px;
+  letter-spacing: .1em;
+  color: #657b99;
+  pointer-events: none;
+}
+.lane-progress{
+  flex: 1;
+  height: 1px;
+  overflow: hidden;
+  background: rgba(150, 185, 240, .1);
+}
+.lane-progress i{
+  display: block;
+  width: 0;
+  height: 100%;
+  background: linear-gradient(90deg, rgba(143, 220, 255, .4), #b48cff);
+  box-shadow: 0 0 8px rgba(143, 220, 255, .35);
+  transition: width .15s linear;
+}
+
+/* 人物详情 */
+.character-layer{
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity .4s ease, visibility .4s ease;
+}
+.character-layer.is-open{
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+.char-backdrop{
+  position: absolute;
+  inset: 0;
+  background: rgba(2, 5, 12, .72);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+.char-flyer{
+  position: fixed;
+  z-index: 44;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--accent, #8fdcff) 38%, transparent);
+  border-radius: 14px;
+  background: linear-gradient(170deg, #0b1627, #040912);
+  box-shadow: 0 28px 80px rgba(0, 0, 0, .5), 0 0 44px color-mix(in srgb, var(--accent, #8fdcff) 10%, transparent);
+  pointer-events: none;
+  transition:
+    left .55s cubic-bezier(.16, .84, .3, 1),
+    top .55s cubic-bezier(.16, .84, .3, 1),
+    width .55s cubic-bezier(.16, .84, .3, 1),
+    height .55s cubic-bezier(.16, .84, .3, 1),
+    opacity .35s ease;
+  will-change: left, top, width, height;
+}
+.char-flyer.is-fading{ opacity: 0; }
+.char-flyer .portrait{ position: absolute; inset: 0; }
+.char-flyer .flyer-caption{
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  z-index: 4;
+  padding: 22px 16px 14px;
+  background: linear-gradient(180deg, transparent, rgba(3, 7, 15, .88));
+}
+.char-flyer .flyer-name{
+  font-family: var(--serif);
+  font-size: 23px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  color: #f5faff;
+}
+.char-flyer .flyer-honor{
+  margin-top: 3px;
+  font-size: 9px;
+  letter-spacing: .05em;
+  color: color-mix(in srgb, var(--accent, #8fdcff) 75%, #ffffff);
+}
+
+.character-stage{
+  --accent: #8fdcff;
+  --accent-rgb: 143, 220, 255;
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  z-index: 46;
+  display: grid;
+  grid-template-columns: minmax(240px, .82fr) minmax(0, 1.35fr);
+  width: min(1000px, 92vw);
+  max-height: 86vh;
+  max-height: 86dvh;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--accent) 34%, transparent);
+  border-radius: 17px;
+  background: linear-gradient(150deg, rgba(12, 23, 42, .98), rgba(4, 9, 18, .99) 68%);
+  box-shadow:
+    0 38px 110px rgba(0, 0, 0, .66),
+    0 0 70px color-mix(in srgb, var(--accent) 9%, transparent),
+    inset 0 1px 0 rgba(255, 255, 255, .05);
+  opacity: 0;
+  transform: translate(-50%, -48%) scale(.95);
+  pointer-events: none;
+  transition: opacity .38s ease, transform .5s cubic-bezier(.2, .8, .2, 1);
+}
+.character-stage.is-open{
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
+  pointer-events: auto;
+}
+.character-stage:not(.is-open){
+  transition: opacity .26s ease, transform .3s ease;
+}
+.stage-portrait{
+  position: relative;
+  min-height: 520px;
+  border-right: 1px solid rgba(150, 185, 240, .1);
+  overflow: hidden;
+}
+.stage-portrait .portrait{ position: absolute; inset: 0; }
+.stage-portrait .portrait-glyph{ font-size: 240px; }
+.stage-body{
+  position: relative;
+  padding: 34px 38px 38px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+}
+.stage-eyebrow{
+  padding-right: 82px;
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: .14em;
+  color: #7d94b4;
+}
+.stage-honor{
+  margin-top: 10px;
+  padding-right: 50px;
+  font-family: var(--sans);
+  font-size: clamp(26px, 3vw, 37px);
+  font-weight: 800;
+  line-height: 1.35;
+  letter-spacing: .04em;
+  background: linear-gradient(100deg, #ffffff, color-mix(in srgb, var(--accent) 86%, #ffffff) 60%, var(--accent));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 0 24px color-mix(in srgb, var(--accent) 18%, transparent));
+}
+.stage-identity{
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 12px;
+}
+.stage-name{
+  font-family: var(--serif);
+  font-size: 27px;
+  font-weight: 700;
+  letter-spacing: .1em;
+  color: #edf5ff;
+}
+.stage-part{
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  border: 1px solid color-mix(in srgb, var(--accent) 25%, transparent);
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--accent) 7%, transparent);
+  font-family: var(--mono);
+  font-size: 8px;
+  letter-spacing: .08em;
+  color: color-mix(in srgb, var(--accent) 82%, #ffffff);
+}
+.stage-intro{
+  margin-top: 18px;
+  padding-top: 17px;
+  border-top: 1px solid rgba(150, 185, 240, .1);
+  font-size: 13px;
+  line-height: 1.95;
+  color: #b3c5dc;
+  text-align: justify;
+}
+.stage-section{ margin-top: 21px; }
+.stage-section h3{
+  margin-bottom: 9px;
+  font-family: var(--mono);
+  font-size: 9.5px;
+  font-weight: 400;
+  letter-spacing: .14em;
+  color: #8097b7;
+}
+.stage-exp{
+  list-style: none;
+  padding: 0;
+  display: grid;
+  gap: 7px;
+}
+.stage-exp li{
+  position: relative;
+  padding-left: 14px;
+  font-size: 12px;
+  line-height: 1.75;
+  color: #a9bcd5;
+}
+.stage-exp li::before{
+  content: "";
+  position: absolute;
+  left: 1px;
+  top: .7em;
+  width: 4px;
+  height: 1px;
+  background: color-mix(in srgb, var(--accent) 65%, transparent);
+}
+.stage-events{
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+.stage-event{
+  display: inline-block;
+  padding: 3px 8px;
+  border: 1px solid rgba(150, 185, 240, .13);
+  border-radius: 999px;
+  background: rgba(150, 185, 240, .04);
+  font-size: 10.5px;
+  line-height: 1.6;
+  color: #adc1da;
+  transition: color .25s, border-color .25s, background .25s;
+}
+.stage-event:hover{
+  color: #ffffff;
+  border-color: color-mix(in srgb, var(--event-color, #8fdcff) 45%, transparent);
+  background: color-mix(in srgb, var(--event-color, #8fdcff) 10%, transparent);
+}
+
+.toast{
+  position: fixed;
+  left: 50%;
+  bottom: 30px;
+  z-index: 90;
+  max-width: calc(100vw - 40px);
+  padding: 9px 15px;
+  border: 1px solid rgba(150, 185, 240, .22);
+  border-radius: 8px;
+  background: rgba(5, 11, 22, .95);
+  box-shadow: 0 18px 48px rgba(0, 0, 0, .45);
+  color: #dbe9fb;
+  font-size: 11px;
+  line-height: 1.6;
+  letter-spacing: .02em;
+  text-align: center;
+  opacity: 0;
+  transform: translate(-50%, 10px);
+  pointer-events: none;
+  transition: opacity .3s ease, transform .3s ease;
+}
+.toast.is-visible{
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+/* ============================================================
+   响应式
+   ============================================================ */
+
+@media (max-width: 1100px){
+  .chron-bar{ padding: 13px 20px; gap: 14px; }
+  .chron-left{ gap: 11px; }
+  .chron-search{ width: 210px; }
+  .part-btn{ padding: 6px 8px; font-size: 10px; }
+  .lane-head{ left: 5vw; }
+  .lane-foot{ left: 5vw; right: 5vw; }
+}
+
+@media (min-width: 901px) and (max-width: 1180px){
+  .chron-hint{ display: none; }
+}
+
+@media (max-width: 900px){
+  :root{ --bar-h: 68px; }
+  .intro-corner{ display: none; }
+  .chron-bar,
+  .char-bar{
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    padding: 12px 16px 12px;
+  }
+  .chron-left,
+  .char-left{
+    justify-content: space-between;
+    gap: 10px;
+  }
+  .chron-heading h1,
+  .char-heading h1{ font-size: 20px; }
+  .chron-right{
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+  .part-filters{
+    width: 100%;
+    justify-content: space-between;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .part-filters::-webkit-scrollbar{ display: none; }
+  .part-btn{ flex: 1; justify-content: center; }
+  .chron-search{ width: 100%; }
+  .chron-bar{
+    padding-bottom: 13px;
+    background: linear-gradient(180deg, rgba(3, 7, 15, .94), rgba(3, 7, 15, .72) 72%, transparent);
+  }
+  .chron-meta,
+  .chron-legend{ display: none; }
+  .chron-hint{
+    display: block;
+    bottom: calc(18px + env(safe-area-inset-bottom));
+    font-size: 9px;
+    color: #69809f;
+  }
+  .hint-wide{ display: none; }
+  .hint-touch{ display: inline; }
+  .focus-layer{ padding-top: 140px; }
+  .lane-head{
+    top: calc(var(--bar-h) + 76px);
+    left: 6vw;
+  }
+  .lane-kicker{ display: none; }
+  .lane-line{ font-size: 16px; }
+  .lane-wrap{
+    top: calc(var(--bar-h) + 118px);
+    bottom: 72px;
+  }
+  .character-lane{
+    padding-left: 6vw;
+    padding-right: 6vw;
+    gap: 14px;
+  }
+  .char-card{
+    width: clamp(176px, 34vw, 220px);
+    height: min(50vh, 350px);
+    min-height: 264px;
+  }
+  .lane-arrow{ display: none; }
+  .lane-foot{ left: 6vw; right: 6vw; }
+  .char-right{ justify-content: flex-end; gap: 12px; }
+  .char-hint{ display: inline; }
+}
+
+@media (max-width: 900px){
+  .view-switch{
+    top: calc(var(--chron-header, 150px) + 12px);
+  }
+  .timeline-view{
+    grid-template-columns: 1fr;
+    padding-top: 58px;
+  }
+  .timeline-list-wrap{
+    padding: 0 12px 0 20px;
+  }
+  .timeline-heading{ font-size: 20px; }
+  .timeline-head-hint{ display: none; }
+  .timeline-panel{
+    position: fixed;
+    top: auto;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 35;
+    height: auto;
+    max-height: 72vh;
+    max-height: 72dvh;
+    padding: 22px 20px 28px;
+    border-left: 0;
+    border-top: 1px solid rgba(150, 185, 240, .16);
+    border-radius: 16px 16px 0 0;
+    background: linear-gradient(155deg, rgba(10, 20, 37, .99), rgba(4, 9, 18, .99));
+    box-shadow: 0 -30px 80px rgba(0, 0, 0, .55);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transform: translateY(105%);
+    transition: opacity .35s ease, transform .45s cubic-bezier(.2, .8, .2, 1), visibility .35s ease;
+  }
+  .timeline-view.is-detail-open .timeline-panel{
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transform: none;
+  }
+  .timeline-empty{ display: none !important; }
+  .timeline-detail{
+    flex: 1;
+    max-height: calc(72dvh - 78px);
+    padding-top: 20px;
+  }
+  .timeline-close{
+    top: 12px;
+    right: 12px;
+  }
+  .timeline-detail h2{ padding-right: 48px; font-size: 25px; }
+  .timeline-detail .event-section{
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+}
+
+@media (max-width: 700px){
+  .chron-left .audio-label,
+  .char-left .audio-label{ display: none; }
+  .chron-left .audio-btn,
+  .char-left .audio-btn{ padding: 0 7px; }
+  .audio-volume{ width: 42px; }
+  .intro-audio{ right: 16px; bottom: 16px; }
+  .intro-audio .audio-btn{ height: 32px; padding: 0 10px; }
+  .intro-audio .audio-label{ display: none; }
+  .intro-audio .audio-volume{ width: 40px; }
+  .intro-content{ padding: 78px 18px 76px; }
+  .intro-quote{
+    gap: 10px;
+    font-size: 10px;
+    letter-spacing: .18em;
+  }
+  .quote-rule{ width: 18px; }
+  .title-wrap{ margin-top: 19px; padding: 4px 4px 12px; }
+  .universe-title{ font-size: clamp(58px, 19vw, 94px); }
+  .title-edge{ -webkit-text-stroke-width: .9px; transform: translate(3px, 3px); }
+  .slice-a,
+  .slice-b{ display: none; }
+  .slice-c{ opacity: .34; }
+  .intro-en{ font-size: 7.5px; letter-spacing: .28em; }
+  .intro-lede{ max-width: 330px; font-size: 11.5px; }
+  .intro-actions{
+    flex-direction: column;
+    width: 100%;
+    max-width: 286px;
+    gap: 10px;
+    margin-top: 27px;
+  }
+  .portal-btn{ width: 100%; padding: 13px 18px 12px; }
+  .portal-name{ font-size: 16px; }
+  .intro-foot{ font-size: 8.5px; letter-spacing: .12em; bottom: 18px; }
+  .title-frame::before,
+  .title-frame::after{ width: 34px; }
+
+  .detail-layer{ padding: 12px; }
+  .event-card{
+    width: 94vw;
+    max-height: 88vh;
+    max-height: 88dvh;
+    padding: 24px 20px 28px;
+    border-radius: 13px;
+  }
+  .event-card h2{ padding-right: 64px; font-size: 23px; }
+  .card-close{ top: 13px; right: 13px; padding: 5px 9px; font-size: 9px; }
+  .event-card-body{ margin-top: 16px; }
+  .event-section{
+    grid-template-columns: 1fr;
+    gap: 4px;
+    padding: 13px 0;
+  }
+  .event-label{ font-size: 8px; }
+  .event-section p{ font-size: 12.5px; line-height: 1.9; }
+  .event-people{ margin-top: 10px; }
+  .focus-title{ font-size: clamp(24px, 7.2vw, 34px); max-width: 92vw; }
+  .focus-hint{ font-size: 7.5px; }
+  .focus-meta{ font-size: 8px; }
+
+  .lane-head{ display: none; }
+  .lane-wrap{ top: calc(var(--bar-h) + 16px); bottom: 66px; }
+  .character-lane{
+    padding: 8px 14vw 22px;
+    gap: 12px;
+  }
+  .char-card{
+    width: 72vw;
+    max-width: 300px;
+    height: min(60vh, 460px);
+    min-height: 330px;
+  }
+  .char-name{ font-size: 23px; }
+  .lane-foot{ bottom: 17px; left: 6vw; right: 6vw; gap: 10px; }
+  .lane-foot > span:last-child{ display: none; }
+  .character-stage{
+    grid-template-columns: 1fr;
+    width: 92vw;
+    max-height: 90vh;
+    max-height: 90dvh;
+    border-radius: 14px;
+  }
+  .stage-portrait{
+    min-height: 0;
+    height: 32vh;
+    height: 32dvh;
+    border-right: 0;
+    border-bottom: 1px solid rgba(150, 185, 240, .1);
+  }
+  .stage-portrait .portrait-glyph{ font-size: 150px; }
+  .stage-body{ padding: 21px 20px 26px; max-height: 58dvh; }
+  .stage-honor{ font-size: 26px; padding-right: 0; line-height: 1.4; }
+  .stage-eyebrow{ padding-right: 0; font-size: 8px; }
+  .stage-name{ font-size: 23px; }
+  .stage-intro{ margin-top: 14px; padding-top: 14px; font-size: 12px; }
+  .stage-section{ margin-top: 17px; }
+  .stage-close{ top: 12px; right: 12px; padding: 5px 9px; font-size: 9px; }
+}
+
+@media (max-width: 380px){
+  .universe-title{ font-size: 58px; }
+  .intro-quote{ font-size: 9px; letter-spacing: .12em; }
+  .quote-rule{ width: 12px; }
+  .chron-heading h1, .char-heading h1{ font-size: 18px; }
+  .part-btn{ font-size: 9px; padding: 5px 5px; gap: 4px; }
+  .chron-search{ height: 34px; }
+}
+
+@media (max-height: 720px) and (min-width: 800px){
+  .intro-content{ padding-top: 82px; padding-bottom: 60px; }
+  .universe-title{ font-size: clamp(60px, 9.5vw, 132px); }
+  .intro-actions{ margin-top: 25px; }
+  .intro-lede{ margin-top: 12px; }
+  .intro-quote{ font-size: 11px; }
+  .char-card{ height: min(52vh, 340px); }
+  .stage-portrait{ min-height: 430px; }
+}
+
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{
+    animation-duration: .001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .001ms !important;
+    scroll-behavior: auto !important;
+  }
+  .title-scan{ display: none; }
+}
+</style>
+</head>
+<body>
+<main class="app" id="app">
+
+  <!-- ============ 开篇 ============ -->
+  <section class="page page-intro is-active" id="pageIntro" data-page="intro" aria-label="三体宇宙开篇">
+    <canvas class="intro-canvas" id="introCanvas" aria-hidden="true"></canvas>
+    <div class="intro-haze" aria-hidden="true"></div>
+    <div class="intro-vignette" aria-hidden="true"></div>
+    <div class="intro-corner intro-corner-tl" aria-hidden="true">
+      <span>THREE-BODY</span>
+      <span>UNIVERSE / 01</span>
+    </div>
+    <div class="intro-corner intro-corner-tr" aria-hidden="true">
+      <span>三体宇宙</span>
+      <span>CHRONICLE OF A CIVILIZATION</span>
+    </div>
+
+    <div class="intro-content">
+      <p class="intro-quote">
+        <span class="quote-rule" aria-hidden="true"></span>
+        给岁月以文明，而不是给文明以岁月
+        <span class="quote-rule" aria-hidden="true"></span>
+      </p>
+      <div class="title-wrap">
+        <span class="title-frame" aria-hidden="true"><span></span><span></span></span>
+        <h1 class="universe-title" aria-label="三体宇宙">
+          <span class="title-layer title-base">三体宇宙</span>
+          <span class="title-layer title-edge" aria-hidden="true">三体宇宙</span>
+          <span class="title-layer title-slice slice-a" aria-hidden="true">三体宇宙</span>
+          <span class="title-layer title-slice slice-b" aria-hidden="true">三体宇宙</span>
+          <span class="title-layer title-slice slice-c" aria-hidden="true">三体宇宙</span>
+          <span class="title-layer title-scan" aria-hidden="true">三体宇宙</span>
+        </h1>
+      </div>
+      <p class="intro-en">THE THREE-BODY UNIVERSE</p>
+      <p class="intro-lede">三个太阳，一个文明，和一条通往时间尽头的路。</p>
+
+      <div class="intro-actions">
+        <button class="portal-btn portal-chron" type="button" data-goto="chronicle">
+          <span class="portal-no">01 / CHRONICLE</span>
+          <span class="portal-name">三体编年史</span>
+          <span class="portal-en">ENTER THE TIMELINE</span>
+        </button>
+        <button class="portal-btn portal-char" type="button" data-goto="characters">
+          <span class="portal-no">02 / CHARACTERS</span>
+          <span class="portal-name">人物</span>
+          <span class="portal-en">WALK THE CORRIDOR</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="intro-foot" aria-hidden="true">
+      <span class="pulse-dot"></span>
+      <span>在宇宙中，选择你的入口</span>
+    </div>
+
+    <div class="audio-control intro-audio">
+      <button class="audio-btn" type="button" aria-label="播放背景音乐" aria-pressed="false" title="播放背景音乐">
+        <span class="audio-wave" aria-hidden="true"><i></i><i></i><i></i></span>
+        <span class="audio-label">音乐关</span>
+      </button>
+      <input class="audio-volume" type="range" min="0" max="1" step="0.01" value="0.3" aria-label="背景音乐音量" aria-valuetext="30%" title="背景音乐音量">
+    </div>
+  </section>
+
+  <!-- ============ 编年史 ============ -->
+  <section class="page page-chronicle" id="pageChronicle" data-page="chronicle" aria-label="三体编年史" inert>
+    <div class="chron-bg" aria-hidden="true"></div>
+    <canvas class="chron-canvas" id="chronCanvas" tabindex="0" aria-label="事件星穹。使用左右方向键浏览事件，按回车进入事件；滚轮缩放星空，也可以直接点击星点。"></canvas>
+    <div class="chron-glow" aria-hidden="true"></div>
+
+    <header class="chron-bar">
+      <div class="chron-left">
+        <button class="ghost-btn" type="button" data-goto="intro"><span class="arrow">←</span>返回开篇</button>
+        <span class="bar-divider" aria-hidden="true"></span>
+        <div class="topbar-heading chron-heading">
+          <span class="eyebrow">CHRONICLE</span>
+          <h1>编年史</h1>
+        </div>
+        <div class="audio-control">
+          <button class="audio-btn" type="button" aria-label="播放背景音乐" aria-pressed="false" title="播放背景音乐">
+            <span class="audio-wave" aria-hidden="true"><i></i><i></i><i></i></span>
+            <span class="audio-label">音乐关</span>
+          </button>
+          <input class="audio-volume" type="range" min="0" max="1" step="0.01" value="0.3" aria-label="背景音乐音量" aria-valuetext="30%" title="背景音乐音量">
+        </div>
+      </div>
+      <div class="chron-right">
+        <div class="part-filters" role="group" aria-label="按篇章筛选">
+          <button class="part-btn" type="button" data-part="地球往事" style="--pc:#6ea8ff"><i aria-hidden="true"></i>地球往事</button>
+          <button class="part-btn" type="button" data-part="黑暗森林" style="--pc:#b48cff"><i aria-hidden="true"></i>黑暗森林</button>
+          <button class="part-btn" type="button" data-part="死神永生" style="--pc:#f0b866"><i aria-hidden="true"></i>死神永生</button>
+        </div>
+        <label class="chron-search" id="chronSearchBox">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true">
+            <circle cx="11" cy="11" r="7"></circle>
+            <path d="m20 20-3.7-3.7"></path>
+          </svg>
+          <input id="chronSearch" type="search" placeholder="搜索事件 / 人物" autocomplete="off" spellcheck="false" aria-label="搜索事件或人物">
+          <button class="search-clear" id="chronClear" type="button" aria-label="清除搜索">×</button>
+        </label>
+      </div>
+    </header>
+
+    <div class="view-switch" id="viewSwitch" role="group" aria-label="编年史浏览方式">
+      <button class="view-btn is-active" type="button" data-view="stars" aria-pressed="true">
+        <span class="view-icon" aria-hidden="true">✦</span>
+        <span>星空<span class="mode-word">模式</span></span>
+      </button>
+      <button class="view-btn" type="button" data-view="timeline" aria-pressed="false">
+        <span class="view-icon" aria-hidden="true">≡</span>
+        <span>时间线<span class="mode-word">模式</span></span>
+      </button>
+    </div>
+
+    <div class="chron-meta" aria-live="polite">
+      <span id="chronCount">48 EVENTS</span>
+      <span class="meta-sep">/</span>
+      <span id="chronFilterState">全部篇章</span>
+      <span class="meta-sep">/</span>
+      <span id="searchState">悬停星点 · 点击进入</span>
+    </div>
+    <div class="chron-legend" aria-hidden="true">
+      <span><i style="--pc:#6ea8ff"></i>地球往事</span>
+      <span><i style="--pc:#b48cff"></i>黑暗森林</span>
+      <span><i style="--pc:#f0b866"></i>死神永生</span>
+    </div>
+    <div class="chron-hint" aria-hidden="true">
+      <span class="hint-wide">时间自下而上　|　滚轮缩放 · 鼠标视差　|　点击星点 · 飞向事件</span>
+      <span class="hint-touch">时间自下而上 · 轻触星点</span>
+    </div>
+
+    <div class="star-tip" id="starTip" role="status">
+      <span class="tip-part" id="tipPart"></span>
+      <strong class="tip-title" id="tipTitle"></strong>
+      <span class="tip-people" id="tipPeople"></span>
+    </div>
+
+    <div class="focus-layer" id="focusLayer" aria-hidden="true">
+      <p class="focus-meta"><span class="focus-part" id="focusPart"></span><span class="focus-year" id="focusYear"></span></p>
+      <button class="focus-title" id="focusTitle" type="button"></button>
+      <p class="focus-hint">点击标题 · 展开事件档案</p>
+    </div>
+
+    <div class="detail-layer" id="detailLayer" aria-hidden="true">
+      <article class="event-card" id="eventCard" role="dialog" aria-modal="true" aria-labelledby="eventCardTitle">
+        <button class="card-close" id="eventCardClose" type="button">收起 <span>×</span></button>
+        <header class="event-card-head">
+          <div class="event-tags">
+            <span class="part-tag" id="cardPart"></span>
+            <span class="year-tag" id="cardYear"></span>
+          </div>
+          <h2 id="eventCardTitle"></h2>
+          <div class="event-people" id="cardPeople"></div>
+        </header>
+        <div class="event-card-body">
+          <section class="event-section">
+            <span class="event-label">事件简介</span>
+            <p id="cardSummary"></p>
+          </section>
+          <section class="event-section">
+            <span class="event-label">原著章节</span>
+            <p id="cardChapter"></p>
+          </section>
+          <section class="event-section">
+            <span class="event-label">事件影响</span>
+            <p id="cardImpact"></p>
+          </section>
+        </div>
+      </article>
+    </div>
+
+    <div class="timeline-view" id="timelineView" aria-hidden="true">
+      <section class="timeline-list-wrap" aria-label="事件时间线">
+        <div class="timeline-list-head">
+          <div>
+            <span class="eyebrow">TIMELINE</span>
+            <p class="timeline-heading">时间线 <em id="timelineCount">88 个事件</em></p>
+          </div>
+          <span class="timeline-head-hint">点击节点 · 查看详情</span>
+        </div>
+        <div class="timeline-scroll" id="timelineScroll">
+          <ol class="timeline-list" id="timelineList"></ol>
+        </div>
+      </section>
+
+      <aside class="timeline-panel" id="timelinePanel" aria-label="事件详情面板">
+        <button class="timeline-close" id="timelineClose" type="button" hidden>收起 <span>×</span></button>
+        <div class="timeline-empty" id="timelineEmpty">
+          <span class="timeline-empty-mark" aria-hidden="true">✦</span>
+          <p>从左侧选择一个时间点</p>
+          <span>查看事件标题、人物、简介、原著章节与事件影响</span>
+        </div>
+        <article class="timeline-detail" id="timelineDetail" hidden>
+          <p class="tl-detail-eyebrow">EVENT ARCHIVE</p>
+          <div class="event-tags">
+            <span class="part-tag" id="timelinePart"></span>
+            <span class="year-tag" id="timelineYear"></span>
+          </div>
+          <h2 id="timelineTitle"></h2>
+          <div class="event-people" id="timelinePeople"></div>
+          <div class="event-card-body">
+            <section class="event-section">
+              <span class="event-label">事件简介</span>
+              <p id="timelineSummary"></p>
+            </section>
+            <section class="event-section">
+              <span class="event-label">原著章节</span>
+              <p id="timelineChapter"></p>
+            </section>
+            <section class="event-section">
+              <span class="event-label">事件影响</span>
+              <p id="timelineImpact"></p>
+            </section>
+          </div>
+        </article>
+      </aside>
+    </div>
+  </section>
+
+  <!-- ============ 人物长廊 ============ -->
+  <section class="page page-characters" id="pageCharacters" data-page="characters" aria-label="人物长廊" inert>
+    <div class="characters-bg" aria-hidden="true">
+      <span class="char-beam beam-a"></span>
+      <span class="char-beam beam-b"></span>
+    </div>
+
+    <header class="char-bar">
+      <div class="char-left">
+        <button class="ghost-btn" type="button" data-goto="intro"><span class="arrow">←</span>返回开篇</button>
+        <span class="bar-divider" aria-hidden="true"></span>
+        <div class="topbar-heading char-heading">
+          <span class="eyebrow">CHARACTERS</span>
+          <h1>人物长廊</h1>
+        </div>
+        <div class="audio-control">
+          <button class="audio-btn" type="button" aria-label="播放背景音乐" aria-pressed="false" title="播放背景音乐">
+            <span class="audio-wave" aria-hidden="true"><i></i><i></i><i></i></span>
+            <span class="audio-label">音乐关</span>
+          </button>
+          <input class="audio-volume" type="range" min="0" max="1" step="0.01" value="0.3" aria-label="背景音乐音量" aria-valuetext="30%" title="背景音乐音量">
+        </div>
+      </div>
+      <div class="char-right">
+        <span class="char-count" id="charCount">15 位人物</span>
+        <span class="char-hint">左右滑动 · 点击人物</span>
+      </div>
+    </header>
+
+    <div class="lane-head" aria-hidden="true">
+      <p class="lane-kicker">THEY CHOSE, AND THE UNIVERSE ANSWERED</p>
+      <p class="lane-line">每一个选择，都在宇宙里留下回声。</p>
+    </div>
+
+    <div class="lane-wrap">
+      <button class="lane-arrow lane-prev" id="lanePrev" type="button" aria-label="向左浏览人物">←</button>
+      <div class="character-lane" id="characterLane" tabindex="0" aria-label="人物长廊，可左右滚动"></div>
+      <button class="lane-arrow lane-next" id="laneNext" type="button" aria-label="向右浏览人物">→</button>
+    </div>
+
+    <div class="lane-foot" aria-hidden="true">
+      <span id="laneProgressLabel">01 / 15</span>
+      <div class="lane-progress"><i id="laneProgressFill"></i></div>
+      <span>DRAG / SCROLL</span>
+    </div>
+
+    <div class="character-layer" id="characterLayer" aria-hidden="true">
+      <div class="char-backdrop" id="charBackdrop"></div>
+      <div class="char-flyer" id="charFlyer" aria-hidden="true"></div>
+      <article class="character-stage" id="characterStage" role="dialog" aria-modal="true" aria-labelledby="stageHonor charStageName">
+        <button class="stage-close" id="charClose" type="button">收起 <span>×</span></button>
+        <div class="stage-portrait" id="stagePortrait"></div>
+        <div class="stage-body">
+          <p class="stage-eyebrow">特殊称号 / SPECIAL TITLE</p>
+          <h2 class="stage-honor" id="stageHonor"></h2>
+          <div class="stage-identity">
+            <span class="stage-name" id="charStageName"></span>
+            <span class="stage-part" id="stagePart"></span>
+          </div>
+          <p class="stage-intro" id="stageIntro"></p>
+          <section class="stage-section">
+            <h3>关键经历</h3>
+            <ul class="stage-exp" id="stageExp"></ul>
+          </section>
+          <section class="stage-section">
+            <h3>关联事件</h3>
+            <div class="stage-events" id="stageEvents"></div>
+          </section>
+        </div>
+      </article>
+    </div>
+  </section>
+
+</main>
+
+<!-- 背景音乐：eigenTunes亦听 - 罗辑 Logic（循环，默认音量 0.3） -->
+<audio id="bgm" src="./bgm/bgm.mp3" loop preload="auto" aria-hidden="true"></audio>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+'use strict';
+
+/* ============================================================
+   篇章与数据
+   ============================================================ */
+const PARTS = {
+  '地球往事': { color: '#6ea8ff', en: 'THE THREE-BODY PROBLEM' },
+  '黑暗森林': { color: '#b48cff', en: 'THE DARK FOREST' },
+  '死神永生': { color: '#f0b866', en: "DEATH'S END" }
+};
+
+const timelineData = [
+  /* ---------------- 地球往事 ---------------- */
+  {
+    year: '1947年', part: '地球往事', partColor: '#6ea8ff', era: '红岸时代',
+    title: '叶文洁出生',
+    characters: ['叶文洁'],
+    summary: '北京，一个物理学教授的家庭迎来女儿。没有人知道，这个女孩日后会把人类文明的第一声啼鸣送向宇宙。',
+    chapter: '《三体》· 疯狂年代',
+    impact: '一个未来将改变人类命运的人，在北京的冬夜里出生。'
+  },
+  {
+    year: '1967年', part: '地球往事', partColor: '#6ea8ff', era: '红岸时代',
+    title: '叶哲泰之死',
+    characters: ['叶哲泰', '叶文洁'],
+    summary: '父亲在批斗台上被自己的学生打死，叶文洁就站在台下。那一天，她对人类文明的信任出现了第一道裂缝。',
+    chapter: '《三体》· 疯狂年代',
+    impact: '父辈的死亡让叶文洁对人类的失望有了具体的形状。'
+  },
+  {
+    year: '1969年', part: '地球往事', partColor: '#6ea8ff', era: '红岸时代',
+    title: '叶文洁被白沐霖陷害',
+    characters: ['叶文洁', '白沐霖'],
+    summary: '白沐霖把抄写信件的责任推给叶文洁，使她再次见识人性的背叛，也把她推向了红岸基地。',
+    chapter: '《三体》· 大森林',
+    impact: '叶文洁对人类最后一点信任被消耗，她开始走向红岸。'
+  },
+  {
+    year: '1969年', part: '地球往事', partColor: '#6ea8ff', era: '红岸时代',
+    title: '叶文洁在大兴安岭读到《寂静的春天》',
+    characters: ['叶文洁'],
+    summary: '在大兴安岭的孤独岁月里，叶文洁读到《寂静的春天》，开始思考人类是否正在成为地球的癌细胞。',
+    chapter: '《三体》· 寂静的春天',
+    impact: '这本书让她第一次把人类文明视为需要被纠正的对象。'
+  },
+  {
+    year: '1969年', part: '地球往事', partColor: '#6ea8ff', era: '红岸时代',
+    title: '进入红岸基地',
+    characters: ['叶文洁', '杨卫宁', '雷志成'],
+    summary: '大兴安岭深处的雷达峰，代号“红岸”的绝密工程。叶文洁在这里获得了一双可以聆听宇宙的耳朵。',
+    chapter: '《三体》· 红岸之一',
+    impact: '她走进命运的引力场，也走近了人类与三体世界的第一次接触。'
+  },
+  {
+    year: '1971年', part: '地球往事', partColor: '#6ea8ff', era: '红岸时代',
+    title: '太阳的放大器',
+    characters: ['叶文洁'],
+    summary: '她发现太阳的能量镜面可以把电波放大亿万倍。按下发射键的那一刻，地球文明的信息穿过日球层，飞向四光年外。',
+    chapter: '《三体》· 红岸之四',
+    impact: '人类文明的第一声啼鸣飞出太阳系，三体世界即将听见。'
+  },
+  {
+    year: '1975年', part: '地球往事', partColor: '#6ea8ff', era: '红岸时代',
+    title: '三体世界收到信号',
+    characters: ['1379号监听员', '三体元首'],
+    summary: '四光年外，三体世界收到了来自地球的电波。在无数个乱纪元的毁灭与重生之后，他们第一次看见了可以移民的彼岸。',
+    chapter: '《三体》· 三体世界',
+    impact: '一个在乱纪元中挣扎的文明，第一次看见可以移民的彼岸。'
+  },
+  {
+    year: '1979年', part: '地球往事', partColor: '#6ea8ff', era: '红岸时代',
+    title: '“不要回答”',
+    characters: ['叶文洁', '1379号监听员'],
+    summary: '1379号监听员的警告抵达红岸：不要回答！不要回答！不要回答！叶文洁沉默良久，最终按下了发射键——“到这里来吧，我将帮助你们获得这个世界。”',
+    chapter: '《三体》· 监听员',
+    impact: '人类的坐标被交了出去，三体舰队开始启航。'
+  },
+  {
+    year: '1979年', part: '地球往事', partColor: '#6ea8ff', era: '红岸时代',
+    title: '红岸的坠落',
+    characters: ['叶文洁', '雷志成', '杨卫宁'],
+    summary: '政委雷志成和丈夫杨卫宁发现了她的秘密。雷达峰顶，叶文洁割断绳索，看着两个人坠入山谷。她从此不再是那个叶文洁。',
+    chapter: '《三体》· 红岸之七',
+    impact: '秘密被永远封存在雷达峰，叶文洁完成了从受害者到背叛者的转变。'
+  },
+  {
+    year: '1980年', part: '地球往事', partColor: '#6ea8ff', era: '红岸时代',
+    title: '杨冬出生',
+    characters: ['杨冬', '叶文洁'],
+    summary: '叶文洁的女儿出生。多年以后，这个女孩会成为人类最优秀的高能物理学家之一，也会成为最早被“物理学不存在”击碎的人。',
+    chapter: '《三体》· 红岸之后',
+    impact: '叶文洁的血脉延续下去，也将延续她对宇宙的追问。'
+  },
+  {
+    year: '1982年', part: '地球往事', partColor: '#6ea8ff', era: 'ETO 时代',
+    title: '遇见伊文斯',
+    characters: ['叶文洁', '麦克·伊文斯'],
+    summary: '西北的荒山里，伊文斯用一片树林祭奠被人类灭绝的物种。两个对人类失望透顶的人相遇，决定替人类做一次选择。',
+    chapter: '《三体》· 麦克·伊文斯',
+    impact: '两个对人类失望的人相遇，ETO 的思想雏形由此诞生。'
+  },
+  {
+    year: '1985年', part: '地球往事', partColor: '#6ea8ff', era: 'ETO 时代',
+    title: '地球三体组织成立',
+    characters: ['叶文洁', '伊文斯'],
+    summary: 'ETO 成立。叶文洁任统帅，伊文斯掌财权。降临派、拯救派、幸存派——人类第一次在“如何面对外星文明”这件事上分裂。',
+    chapter: '《三体》· 地球三体组织',
+    impact: '人类内部第一次因为外星文明而分裂，拯救与毁灭被摆上同一张桌子。'
+  },
+  {
+    year: '1986年', part: '地球往事', partColor: '#6ea8ff', era: 'ETO 时代',
+    title: '伊文斯建立第二红岸基地',
+    characters: ['伊文斯'],
+    summary: '伊文斯在海上建立第二红岸基地，为 ETO 与三体世界提供稳定的通讯中继。',
+    chapter: '《三体》· 第二红岸基地',
+    impact: '三体世界获得稳定的地球通讯站，ETO 的情报能力大幅提升。'
+  },
+  {
+    year: '1988年', part: '地球往事', partColor: '#6ea8ff', era: 'ETO 时代',
+    title: '“审判日”号启航',
+    characters: ['伊文斯'],
+    summary: '巨轮“审判日”号成为 ETO 的海上总部。它装备着大功率发射系统，日复一日把人类的一切秘密送往三体世界。',
+    chapter: '《三体》· 审判日',
+    impact: 'ETO 拥有了移动的海上要塞，三体世界获得了稳定的人类情报源。'
+  },
+  {
+    year: '2007年', part: '地球往事', partColor: '#6ea8ff', era: 'ETO 时代',
+    title: '三体游戏',
+    characters: ['汪淼'],
+    summary: '一款画面粗糙却让顶尖科学家沉迷的游戏。汪淼在乱纪元的荒漠里一次次死去，逐渐拼出三体世界的模样。',
+    chapter: '《三体》· 三体游戏',
+    impact: '汪淼在游戏中拼出三体世界的轮廓，也一步步走进智子的陷阱。'
+  },
+  {
+    year: '2007年', part: '地球往事', partColor: '#6ea8ff', era: 'ETO 时代',
+    title: '杨冬之死',
+    characters: ['杨冬', '汪淼'],
+    summary: '“物理学不存在了。”留下这句话后，杨冬自杀。她的死像一根引线，把汪淼和“科学边界”拖进更深的黑暗。',
+    chapter: '《三体》· 科学边界',
+    impact: '科学界被恐惧笼罩，“物理学不存在”成为智子封锁的第一声丧钟。'
+  },
+  {
+    year: '2007年', part: '地球往事', partColor: '#6ea8ff', era: 'ETO 时代',
+    title: '汪淼观测到宇宙闪烁',
+    characters: ['汪淼'],
+    summary: '汪淼在观测中看到宇宙背景辐射的闪烁，意识到智子正在干扰人类实验。',
+    chapter: '《三体》· 宇宙闪烁',
+    impact: '汪淼第一次看见智子干扰宇宙背景辐射的证据，确信敌人存在。'
+  },
+  {
+    year: '2007年', part: '地球往事', partColor: '#6ea8ff', era: 'ETO 时代',
+    title: '史强接手汪淼相关案件',
+    characters: ['史强', '汪淼'],
+    summary: '史强接手汪淼相关案件，以粗粝直接的方式介入科学边界与倒计时事件。',
+    chapter: '《三体》· 史强',
+    impact: '史强成为汪淼的搭档，人类情报系统开始正面接触三体危机。'
+  },
+  {
+    year: '2007年', part: '地球往事', partColor: '#6ea8ff', era: 'ETO 时代',
+    title: '视网膜上的倒计时',
+    characters: ['汪淼', '史强'],
+    summary: '汪淼眼前出现了一串无法关闭的倒计时。智子第一次让人类意识到：有一双眼睛，正在注视着我们。',
+    chapter: '《三体》· 倒计时',
+    impact: '智子的存在被人类察觉，敌人第一次从传说变成了眼前的注视。'
+  },
+  {
+    year: '2007年', part: '地球往事', partColor: '#6ea8ff', era: 'ETO 时代',
+    title: '智子抵达',
+    characters: ['三体世界', '汪淼'],
+    summary: '两颗被二维展开、刻成集成电路的质子抵达太阳系。它们锁死人类的高能物理，也监听着人类的每一句话。',
+    chapter: '《三体》· 智子',
+    impact: '人类基础科学被锁死，三体世界在地球上拥有了一双永远睁着的眼睛。'
+  },
+  {
+    year: '2007年', part: '地球往事', partColor: '#6ea8ff', era: 'ETO 时代',
+    title: '古筝行动策划',
+    characters: ['汪淼', '史强', '联合国'],
+    summary: '人类决定利用巴拿马运河与纳米丝“飞刃”截击“审判日”号，古筝行动进入策划阶段。',
+    chapter: '《三体》· 古筝行动',
+    impact: '古筝行动的方案确定，为摧毁 ETO 海上总部铺平道路。'
+  },
+  {
+    year: '2007年', part: '地球往事', partColor: '#6ea8ff', era: 'ETO 时代',
+    title: '古筝行动',
+    characters: ['汪淼', '史强', '伊文斯'],
+    summary: '巴拿马运河，纳米丝“飞刃”把“审判日”号连同船上的秘密切成薄片。伊文斯死了，ETO 的核心沉入河底。',
+    chapter: '《三体》· 古筝行动',
+    impact: 'ETO 高层覆灭，人类夺回三体世界的通讯记录，也得知了四百年后的末日。'
+  },
+  {
+    year: '2007年', part: '地球往事', partColor: '#6ea8ff', era: 'ETO 时代',
+    title: '叶文洁的黄昏',
+    characters: ['叶文洁', '罗辑'],
+    summary: '在雷达峰的夕阳里，叶文洁向罗辑讲完宇宙社会学的两条公理，和那个名为“黑暗森林”的猜想。她把钥匙交给了下一个人。',
+    chapter: '《三体》· 黑暗森林',
+    impact: '黑暗森林的种子被交给罗辑，人类最后的希望在一个黄昏里发芽。'
+  },
+
+  /* ---------------- 黑暗森林 ---------------- */
+  {
+    year: '危机纪元前', part: '黑暗森林', partColor: '#b48cff', era: '危机纪元',
+    title: '三体舰队起航奔赴太阳系',
+    characters: ['三体舰队'],
+    summary: '三体舰队启航，带着征服太阳系的使命飞向四光年外的人类世界。',
+    chapter: '《三体》· 三体舰队',
+    impact: '三体舰队启航，人类的末日时钟开始倒计时。'
+  },
+  {
+    year: '危机纪元 1 年', part: '黑暗森林', partColor: '#b48cff', era: '危机纪元',
+    title: '危机降临',
+    characters: ['罗辑', '史强'],
+    summary: '三体舰队正在逼近，四百年后抵达。联合政府成立，人类进入危机纪元；逃亡主义和失败主义同时蔓延。',
+    chapter: '《黑暗森林》· 危机纪元',
+    impact: '全人类进入危机纪元，逃亡、失败与抵抗成为此后四个世纪的主题。'
+  },
+  {
+    year: '危机纪元 3 年', part: '黑暗森林', partColor: '#b48cff', era: '危机纪元',
+    title: '面壁计划',
+    characters: ['泰勒', '雷迪亚兹', '希恩斯', '罗辑'],
+    summary: '四位面壁者获得不受约束的权力与资源。他们的真实计划只能藏在心里，连最亲近的人也不能知道。',
+    chapter: '《黑暗森林》· 面壁者',
+    impact: '四位面壁者以欺骗为武器，人类第一次把希望交给无法被看穿的孤独。'
+  },
+  {
+    year: '危机纪元 3 年', part: '黑暗森林', partColor: '#b48cff', era: '危机纪元',
+    title: '罗辑的困惑',
+    characters: ['罗辑', '史强'],
+    summary: '罗辑是第四位面壁者，却连自己为什么被选中都不知道。直到他想起叶文洁的那个黄昏，和那两条简单的公理。',
+    chapter: '《黑暗森林》· 面壁者',
+    impact: '罗辑开始追查自己被选中的原因，宇宙社会学的两条公理逐渐浮出水面。'
+  },
+  {
+    year: '危机纪元 5 年', part: '黑暗森林', partColor: '#b48cff', era: '危机纪元',
+    title: '罗辑遇见庄颜',
+    characters: ['罗辑', '庄颜'],
+    summary: '罗辑在面壁者权限下找到庄颜，两人在湖边度过一段远离使命的时光。',
+    chapter: '《黑暗森林》· 庄颜',
+    impact: '庄颜让罗辑在面壁者的孤独中获得短暂的平静与牵挂。'
+  },
+  {
+    year: '危机纪元 8 年', part: '黑暗森林', partColor: '#b48cff', era: '危机纪元',
+    title: '增援未来',
+    characters: ['章北海'],
+    summary: '太空军政委章北海提出“增援未来”，把一批军人送入冬眠。他相信人类必败，也相信要为失败之后留一颗火种。',
+    chapter: '《黑暗森林》· 增援未来',
+    impact: '章北海把一批军人送入冬眠，为注定失败的战争留下另一条道路。'
+  },
+  {
+    year: '危机纪元 12 年', part: '黑暗森林', partColor: '#b48cff', era: '危机纪元',
+    title: '泰勒的面壁计划被破壁',
+    characters: ['泰勒', '破壁人'],
+    summary: '泰勒的破壁人揭穿量子舰队计划，面壁者的第一层面纱被撕开。',
+    chapter: '《黑暗森林》· 破壁人',
+    impact: '泰勒的量子舰队计划被揭穿，面壁计划第一次受挫。'
+  },
+  {
+    year: '危机纪元 12 年', part: '黑暗森林', partColor: '#b48cff', era: '危机纪元',
+    title: '雷迪亚兹的面壁计划被破壁',
+    characters: ['雷迪亚兹', '破壁人'],
+    summary: '雷迪亚兹的破壁人揭露恒星型氢弹计划，人类开始恐惧面壁者的极端。',
+    chapter: '《黑暗森林》· 破壁人',
+    impact: '雷迪亚兹的恒星型氢弹计划被破壁，面壁者的威慑逻辑暴露。'
+  },
+  {
+    year: '危机纪元 12 年', part: '黑暗森林', partColor: '#b48cff', era: '危机纪元',
+    title: '罗辑领悟宇宙社会学公理',
+    characters: ['罗辑'],
+    summary: '罗辑在孤独中重新审视叶文洁的两条公理，宇宙社会学的轮廓逐渐清晰。',
+    chapter: '《黑暗森林》· 宇宙社会学',
+    impact: '罗辑从叶文洁的公理出发，推演出宇宙社会学的核心。'
+  },
+  {
+    year: '危机纪元 12 年', part: '黑暗森林', partColor: '#b48cff', era: '危机纪元',
+    title: '罗辑推导出黑暗森林法则',
+    characters: ['罗辑'],
+    summary: '罗辑正式推导出黑暗森林法则，宇宙的沉默有了答案。',
+    chapter: '《黑暗森林》· 黑暗森林',
+    impact: '黑暗森林法则被正式提出，人类第一次理解宇宙的沉默。'
+  },
+  {
+    year: '危机纪元 12 年', part: '黑暗森林', partColor: '#b48cff', era: '危机纪元',
+    title: '咒语',
+    characters: ['罗辑'],
+    summary: '罗辑向宇宙广播恒星 187J3X1 的坐标。半个世纪后，那颗恒星被一枚光粒摧毁。黑暗森林第一次露出獠牙。',
+    chapter: '《黑暗森林》· 咒语',
+    impact: '一颗恒星的毁灭验证了黑暗森林法则，人类手中第一次有了真正的底牌。'
+  },
+  {
+    year: '危机纪元 12 年', part: '黑暗森林', partColor: '#b48cff', era: '危机纪元',
+    title: '冬眠',
+    characters: ['罗辑'],
+    summary: '基因导弹袭击之后，罗辑进入冬眠。他与这个世界约定：未来见。那时人类还相信自己会赢。',
+    chapter: '《黑暗森林》· 咒语',
+    impact: '罗辑把自己交给未来，黑暗森林的谜底被推迟到两个世纪之后。'
+  },
+  {
+    year: '危机纪元 16 年', part: '黑暗森林', partColor: '#b48cff', era: '危机纪元',
+    title: '太空电梯',
+    characters: ['人类'],
+    summary: '赤道上的太空电梯建成，人类进入大规模太空开发时代。舰队在轨道上生长，像一排排准备出鞘的剑。',
+    chapter: '《黑暗森林》· 大低谷',
+    impact: '人类进入大规模太空开发时代，舰队与太空城在轨道上生长。'
+  },
+  {
+    year: '危机纪元 20 年', part: '黑暗森林', partColor: '#b48cff', era: '危机纪元',
+    title: '大低谷',
+    characters: ['人类'],
+    summary: '恐惧压垮了经济，饥荒与战乱接踵而至。人类在自我消耗中失去了大半人口，历史进入长达半个世纪的寒冬。',
+    chapter: '《黑暗森林》· 大低谷',
+    impact: '恐惧压垮了文明，人类在自我消耗中失去了大半人口。'
+  },
+  {
+    year: '危机纪元 80 年', part: '黑暗森林', partColor: '#b48cff', era: '危机纪元',
+    title: '大低谷之后',
+    characters: ['人类'],
+    summary: '“给岁月以文明，而不是给文明以岁月。”废墟上重建的世界更加理性，技术爆炸，舰队扩张，人类重新相信自己能赢。',
+    chapter: '《黑暗森林》· 大低谷',
+    impact: '人类在废墟上重建理性，技术爆炸让失败的阴影暂时退后。'
+  },
+  {
+    year: '危机纪元 205 年', part: '黑暗森林', partColor: '#b48cff', era: '危机纪元',
+    title: '罗辑苏醒',
+    characters: ['罗辑', '史强'],
+    summary: '他在未来醒来，眼前是人类引以为傲的两千艘恒星级战舰，和一场早已注定的葬礼。',
+    chapter: '《黑暗森林》· 苏醒',
+    impact: '他睁开眼，看见人类最骄傲的舰队，也看见一场即将到来的葬礼。'
+  },
+  {
+    year: '危机纪元 205 年', part: '黑暗森林', partColor: '#b48cff', era: '危机纪元',
+    title: '雪地工程启动',
+    characters: ['罗辑'],
+    summary: '罗辑启动雪地工程，在太阳系边缘布置恒星型氢弹，为最终的威慑做准备。',
+    chapter: '《黑暗森林》· 雪地工程',
+    impact: '雪地工程为罗辑的最终威慑提供了掩护。'
+  },
+  {
+    year: '危机纪元 205 年', part: '黑暗森林', partColor: '#b48cff', era: '危机纪元',
+    title: '三体收到广播，下令水滴先行出发',
+    characters: ['三体世界', '水滴'],
+    summary: '三体世界收到罗辑的坐标广播，命令水滴加速先行，直扑太阳系。',
+    chapter: '《黑暗森林》· 黑暗森林',
+    impact: '三体世界识破广播的威胁，命令水滴加速驶向太阳系。'
+  },
+  {
+    year: '危机纪元 205 年', part: '黑暗森林', partColor: '#b48cff', era: '危机纪元',
+    title: '水滴',
+    characters: ['丁仪', '三体探测器'],
+    summary: '一枚表面绝对光滑的探测器穿过太阳系，像一滴完美的水银。丁仪在接触前喊：“傻孩子们，快跑啊！”',
+    chapter: '《黑暗森林》· 水滴',
+    impact: '完美的探测器让人类放下戒心，丁仪在接触前发出最后的警告。'
+  },
+  {
+    year: '危机纪元 205 年', part: '黑暗森林', partColor: '#b48cff', era: '危机纪元',
+    title: '人类舰队列队迎接水滴',
+    characters: ['人类舰队'],
+    summary: '人类舰队排出整齐队列迎接水滴，把敌人的探测器当作和平的使者。',
+    chapter: '《黑暗森林》· 末日战役',
+    impact: '人类舰队以胜利者的姿态列队，迎接即将到来的屠杀。'
+  },
+  {
+    year: '危机纪元 205 年', part: '黑暗森林', partColor: '#b48cff', era: '危机纪元',
+    title: '末日战役',
+    characters: ['丁仪', '人类舰队'],
+    summary: '半小时，两千艘战舰化为灰烬。一枚水滴，让人类看清了文明与文明之间那道无法逾越的技术鸿沟。',
+    chapter: '《黑暗森林》· 末日战役',
+    impact: '人类舰队半小时覆灭，技术鸿沟以最残酷的方式被展示。'
+  },
+  {
+    year: '危机纪元 205 年', part: '黑暗森林', partColor: '#b48cff', era: '危机纪元',
+    title: '水滴封锁太阳',
+    characters: ['水滴'],
+    summary: '水滴封锁太阳，切断人类通过太阳放大电波的能力。',
+    chapter: '《黑暗森林》· 末日战役',
+    impact: '人类失去向宇宙广播的能力，只能等待罗辑的最后一搏。'
+  },
+  {
+    year: '危机纪元 205 年', part: '黑暗森林', partColor: '#b48cff', era: '危机纪元',
+    title: '青铜时代号、量子号互相攻击',
+    characters: ['青铜时代号', '量子号'],
+    summary: '青铜时代号与量子号在黑暗战役中互相攻击，星舰人类第一次自相残杀。',
+    chapter: '《黑暗森林》· 黑暗战役',
+    impact: '黑暗战役爆发，星舰人类在猜疑链中互相残杀。'
+  },
+  {
+    year: '危机纪元 205 年', part: '黑暗森林', partColor: '#b48cff', era: '危机纪元',
+    title: '黑暗森林',
+    characters: ['罗辑', '三体世界'],
+    summary: '罗辑以雪地工程为掩护，把氢弹布置成指向三体世界的坐标广播。他握住开关，用同归于尽换来了人类的喘息。',
+    chapter: '《黑暗森林》· 黑暗森林',
+    impact: '罗辑以同归于尽建立威慑，三体舰队转向，人类获得半个世纪的喘息。'
+  },
+  {
+    year: '威慑纪元 1 年', part: '黑暗森林', partColor: '#b48cff', era: '威慑纪元',
+    title: '三体撤退',
+    characters: ['三体舰队', '智子'],
+    summary: '三体舰队转向，智子的封锁松动。两个文明进入脆弱的和平，人类把这段岁月称为威慑纪元。',
+    chapter: '《黑暗森林》· 黑暗森林',
+    impact: '威慑纪元开始，和平建立在一个人手指与宇宙坐标之间。'
+  },
+
+  /* ---------------- 死神永生 ---------------- */
+  {
+    year: '危机纪元 205 年', part: '死神永生', partColor: '#f0b866', era: '危机纪元',
+    title: '云天明身患绝症',
+    characters: ['云天明', '程心'],
+    summary: '云天明被确诊绝症，程心的一个请求让他成为阶梯计划的人选。',
+    chapter: '《死神永生》· 阶梯计划',
+    impact: '云天明被诊断绝症，他的生命成为阶梯计划最后的筹码。'
+  },
+  {
+    year: '危机纪元 205 年', part: '死神永生', partColor: '#f0b866', era: '危机纪元',
+    title: '云天明购买DX3906恒星送给程心',
+    characters: ['云天明', '程心'],
+    summary: '云天明用最后的钱买下 DX3906 恒星，作为送给程心的礼物。',
+    chapter: '《死神永生》· DX3906',
+    impact: '云天明买下 DX3906 送给程心，留下跨越光年的礼物。'
+  },
+  {
+    year: '危机纪元 205 年', part: '死神永生', partColor: '#f0b866', era: '危机纪元',
+    title: '阶梯计划立项',
+    characters: ['程心', '联合国'],
+    summary: '联合国批准阶梯计划，决定把一颗人类大脑送入三体舰队。',
+    chapter: '《死神永生》· 阶梯计划',
+    impact: '阶梯计划立项，人类决定只送一颗大脑去三体舰队。'
+  },
+  {
+    year: '危机纪元 205 年', part: '死神永生', partColor: '#f0b866', era: '危机纪元',
+    title: '云天明大脑被发射送入宇宙',
+    characters: ['云天明', '程心'],
+    summary: '云天明的大脑被发射升空，带着人类最后的秘密飞向深空。',
+    chapter: '《死神永生》· 阶梯计划',
+    impact: '云天明的大脑被送入宇宙，成为人类安插在敌人内部的眼睛。'
+  },
+  {
+    year: '危机纪元 205 年', part: '死神永生', partColor: '#f0b866', era: '危机纪元',
+    title: '三体舰队捕获云天明大脑',
+    characters: ['云天明', '三体舰队'],
+    summary: '三体舰队捕获云天明的大脑，他的意识在敌人手中被复活。',
+    chapter: '《死神永生》· 阶梯计划',
+    impact: '三体舰队捕获云天明的大脑，他的命运被彻底改写。'
+  },
+  {
+    year: '威慑纪元 62 年', part: '死神永生', partColor: '#f0b866', era: '威慑纪元',
+    title: '程心被推举参选执剑人',
+    characters: ['程心'],
+    summary: '程心被推举为执剑人候选人，人类期待一个更温柔的选择。',
+    chapter: '《死神永生》· 执剑人',
+    impact: '程心被推举为执剑人候选人，人类把希望寄托在“爱”上。'
+  },
+  {
+    year: '威慑纪元 62 年', part: '死神永生', partColor: '#f0b866', era: '威慑纪元',
+    title: '执剑人',
+    characters: ['罗辑', '程心'],
+    summary: '罗辑把引力波发射开关交给程心。人类选择了温柔的“圣母”，而罗辑在黑暗里独自站了五十四年。',
+    chapter: '《死神永生》· 执剑人',
+    impact: '罗辑把开关交给程心，人类把命运交给了一个温柔的选择。'
+  },
+  {
+    year: '威慑纪元 62 年', part: '死神永生', partColor: '#f0b866', era: '威慑纪元',
+    title: '威慑失败',
+    characters: ['程心', '智子', '水滴'],
+    summary: '警报响起，程心没有按下按钮。水滴摧毁引力波发射台，三体舰队再次转向太阳系。和平在几分钟内结束。',
+    chapter: '《死神永生》· 威慑失败',
+    impact: '程心没有按下按钮，三体舰队再次转向太阳系，和平在几分钟内崩塌。'
+  },
+  {
+    year: '威慑纪元 62 年', part: '死神永生', partColor: '#f0b866', era: '威慑纪元',
+    title: '智子接管地球',
+    characters: ['智子'],
+    summary: '智子接管地球，人类在威慑失败后进入被统治的时代。',
+    chapter: '《死神永生》· 威慑失败',
+    impact: '智子接管地球，人类进入被占领的黑暗岁月。'
+  },
+  {
+    year: '威慑纪元 62 年', part: '死神永生', partColor: '#f0b866', era: '威慑纪元',
+    title: '引力波广播',
+    characters: ['万有引力号', '蓝色空间号'],
+    summary: '万有引力号与蓝色空间号越过黑暗，启动引力波发射。三体世界的坐标暴露，两个文明的命运同时被改写。',
+    chapter: '《死神永生》· 引力波广播',
+    impact: '三体坐标被广播，两个文明的命运同时被推上赌桌。'
+  },
+  {
+    year: '广播纪元 7 年', part: '死神永生', partColor: '#f0b866', era: '广播纪元',
+    title: '光粒',
+    characters: ['歌者', '三体世界'],
+    summary: '一枚光粒穿过三体恒星。三体文明在烈焰中终结，只有少数舰队和智子幸存。宇宙没有旁观者。',
+    chapter: '《死神永生》· 光粒',
+    impact: '三体恒星被摧毁，三体文明在烈焰中终结，宇宙的黑暗被照亮一瞬。'
+  },
+  {
+    year: '广播纪元 7 年', part: '死神永生', partColor: '#f0b866', era: '广播纪元',
+    title: '智子的告别',
+    characters: ['智子', '程心'],
+    summary: '智子最后一次出现，向程心告别：“宇宙很大，生活更大，也许以后还有缘相见。”然后她走进了四光年外的星光。',
+    chapter: '《死神永生》· 智子',
+    impact: '智子向程心告别，敌人与人类之间第一次出现近似温柔的东西。'
+  },
+  {
+    year: '广播纪元 7 年', part: '死神永生', partColor: '#f0b866', era: '广播纪元',
+    title: '云天明和程心在智子监视下会面',
+    characters: ['云天明', '程心', '智子'],
+    summary: '云天明在智子监视下与程心会面，用三个童话藏起宇宙的秘密。',
+    chapter: '《死神永生》· 三个童话',
+    impact: '云天明与程心完成最后一次见面，童话成为唯一的通信方式。'
+  },
+  {
+    year: '广播纪元 7 年', part: '死神永生', partColor: '#f0b866', era: '广播纪元',
+    title: '三个童话',
+    characters: ['云天明', '程心'],
+    summary: '云天明从三体舰队发回三个童话。故事里藏着曲率驱动、黑域与二向箔的秘密，也藏着他没能说出口的告别。',
+    chapter: '《死神永生》· 三个童话',
+    impact: '云天明把宇宙的秘密藏进童话，交给人类最后的情书。'
+  },
+  {
+    year: '广播纪元 8 年', part: '死神永生', partColor: '#f0b866', era: '广播纪元',
+    title: '掩体计划',
+    characters: ['人类'],
+    summary: '既然无法战胜，就躲到巨行星背后。人类在木星、土星、天王星的身后建造太空城，把希望寄托在岩层与阴影里。',
+    chapter: '《死神永生》· 掩体计划',
+    impact: '人类把希望寄托在巨行星背后，试图在黑暗森林里躲过下一次枪响。'
+  },
+  {
+    year: '广播纪元 8 年', part: '死神永生', partColor: '#f0b866', era: '广播纪元',
+    title: '维德秘密开展曲率飞船研究',
+    characters: ['维德'],
+    summary: '维德在星环城秘密推进曲率飞船研究，试图为人类留一条生路。',
+    chapter: '《死神永生》· 光速飞船',
+    impact: '维德秘密推进曲率飞船研究，为人类保留最后的逃亡可能。'
+  },
+  {
+    year: '广播纪元 8 年', part: '死神永生', partColor: '#f0b866', era: '广播纪元',
+    title: '光速飞船之争',
+    characters: ['维德', '程心'],
+    summary: '维德要造曲率飞船，程心以“爱”与“人性”阻止了他。人类把最后的生机交还给道德，也交还给了命运。',
+    chapter: '《死神永生》· 光速飞船',
+    impact: '程心阻止了维德，人类放弃了最后的逃生可能，也保住了自己的道德。'
+  },
+  {
+    year: '掩体纪元 1 年', part: '死神永生', partColor: '#f0b866', era: '掩体纪元',
+    title: '掩体工程大规模建造',
+    characters: ['人类'],
+    summary: '掩体工程大规模建造，人类把希望寄托在巨行星背后的太空城。',
+    chapter: '《死神永生》· 掩体计划',
+    impact: '掩体工程大规模展开，人类把城市搬进巨行星的阴影。'
+  },
+  {
+    year: '掩体纪元 11 年', part: '死神永生', partColor: '#f0b866', era: '掩体纪元',
+    title: '星环城',
+    characters: ['维德', '程心'],
+    summary: '维德宣布星环城独立，换来的是围城与审判。他被处决前只留下一句话：“前进！前进！不择手段地前进！”',
+    chapter: '《死神永生》· 星环城',
+    impact: '维德被处决，“前进”成为人类最后一个不择手段的理想。'
+  },
+  {
+    year: '掩体纪元 66 年', part: '死神永生', partColor: '#f0b866', era: '掩体纪元',
+    title: '歌者收到太阳系坐标',
+    characters: ['歌者'],
+    summary: '歌者收到太阳系坐标，决定用二向箔清理这个低熵世界。',
+    chapter: '《死神永生》· 二向箔',
+    impact: '歌者收到太阳系坐标，二向箔被投向太阳系。'
+  },
+  {
+    year: '掩体纪元 66 年', part: '死神永生', partColor: '#f0b866', era: '掩体纪元',
+    title: '二向箔',
+    characters: ['歌者'],
+    summary: '歌者漫不经心地弹出一张“二向箔”。太阳系像一幅被揭下的画，从三维的坐标纸上缓缓脱落。',
+    chapter: '《死神永生》· 二向箔',
+    impact: '歌者投下二向箔，太阳系被从三维宇宙中抹去。'
+  },
+  {
+    year: '掩体纪元 66 年', part: '死神永生', partColor: '#f0b866', era: '掩体纪元',
+    title: '太阳系二维化',
+    characters: ['罗辑', '程心', '艾AA'],
+    summary: '冥王星上，罗辑守着人类文明的墓碑。太阳系跌入二维，成为一幅没有厚度、也没有尽头的《星空》。',
+    chapter: '《死神永生》· 太阳系二维化',
+    impact: '罗辑守着人类文明的墓碑，太阳系成为一幅没有厚度的画。'
+  },
+  {
+    year: '掩体纪元 66 年', part: '死神永生', partColor: '#f0b866', era: '掩体纪元',
+    title: '曲率飞船',
+    characters: ['程心', '艾AA'],
+    summary: '程心和艾AA驾驶“星环”号逃离。身后，太阳系正在变成一幅巨大的画；身前，是空无一物的宇宙。',
+    chapter: '《死神永生》· 太阳系二维化',
+    impact: '程心与艾AA逃离，身后是文明的全部遗产，身前是空无一物的宇宙。'
+  },
+  {
+    year: '银河纪元', part: '死神永生', partColor: '#f0b866', era: '银河纪元',
+    title: '蓝星与灰星被发现',
+    characters: ['程心', '关一帆'],
+    summary: '蓝星与灰星被发现，程心和关一帆在银河纪元找到新的坐标。',
+    chapter: '《死神永生》· 银河纪元',
+    impact: '蓝星与灰星被发现，银河纪元的人类找到新的落脚点。'
+  },
+  {
+    year: '银河纪元', part: '死神永生', partColor: '#f0b866', era: '银河纪元',
+    title: '程心、关一帆前往蓝星',
+    characters: ['程心', '关一帆'],
+    summary: '程心与关一帆前往蓝星，去寻找云天明留下的童话与麦田。',
+    chapter: '《死神永生》· 银河纪元',
+    impact: '程心与关一帆前往蓝星，去寻找云天明留下的童话。'
+  },
+  {
+    year: '银河纪元', part: '死神永生', partColor: '#f0b866', era: '银河纪元',
+    title: '蓝星',
+    characters: ['程心', '艾AA', '关一帆'],
+    summary: '她们在蓝星降落，发现云天明曾在这里等了一生。他留下一个只有程心能看懂的童话，和一片没有尽头的麦田。',
+    chapter: '《死神永生》· 银河纪元',
+    impact: '云天明曾在这里等了一生，留下童话、麦田和来不及说出口的告别。'
+  },
+  {
+    year: '银河纪元', part: '死神永生', partColor: '#f0b866', era: '银河纪元',
+    title: '死线',
+    characters: ['程心', '关一帆'],
+    summary: '误入死线之后，时间在舱外狂奔。再醒来时，云天明与艾AA已经走完了一生，只留下一个遥远的传说。',
+    chapter: '《死神永生》· 死线',
+    impact: '时间在舱外狂奔，程心与关一帆被抛向一个没有故人的未来。'
+  },
+  {
+    year: '647 号宇宙', part: '死神永生', partColor: '#f0b866', era: '647 号宇宙',
+    title: '时间之外',
+    characters: ['程心', '关一帆', '智子'],
+    summary: '智子在 647 号宇宙迎接他们。这里没有时间，没有战争，只有一段属于三个人的、短暂而安静的田园生活。',
+    chapter: '《死神永生》· 647号宇宙',
+    impact: '647 号宇宙成为三个人的田园，时间在这里失去意义。'
+  },
+  {
+    year: '647 号宇宙', part: '死神永生', partColor: '#f0b866', era: '647 号宇宙',
+    title: '回归运动',
+    characters: ['程心', '关一帆', '智子'],
+    summary: '大宇宙的广播传来：请归还质量。程心留下一个生态球，作为对宇宙最后的温柔，也作为对生命的最后一点私心。',
+    chapter: '《死神永生》· 回归运动',
+    impact: '程心留下生态球，把最后的温柔与私心交给重启的宇宙。'
+  },
+  {
+    year: '时间之外', part: '死神永生', partColor: '#f0b866', era: '647 号宇宙',
+    title: '死神永生',
+    characters: ['程心'],
+    summary: '宇宙的田园时代终将重启，而死神永生。故事在“我们的宇宙曾是一个田园时代”的低语中落幕。',
+    chapter: '《死神永生》· 尾声',
+    impact: '宇宙的田园时代终将重启，而死神永生。故事在低语中落幕。'
+  },
+
+  /* 追加事件：字段已规范为既有 timelineData 结构，并统一使用三部曲既有配色 */
+  {
+    year: '1969年', part: '地球往事', partColor: '#6ea8ff', era: '红岸时代',
+    title: '叶文洁结识杨卫宁',
+    characters: ['叶文洁', '杨卫宁'],
+    summary: '杨卫宁欣赏叶文洁的专业能力，将她引荐进入红岸基地，后来二人结为夫妻。',
+    chapter: '《地球往事》 第6章',
+    impact: '是叶文洁得以留在红岸、获得通信权限的重要契机。'
+  },
+  {
+    year: '1979年', part: '地球往事', partColor: '#6ea8ff', era: '红岸时代',
+    title: '叶文洁与杨卫宁、雷志成遇害',
+    characters: ['叶文洁', '杨卫宁', '雷志成'],
+    summary: '叶文洁为保守和三体通信的秘密，在山体滑坡时选择放弃营救二人。',
+    chapter: '《地球往事》 第13章',
+    impact: '叶文洁彻底斩断退路，坚定了引入外星文明改造人类的想法。'
+  },
+  {
+    year: '1982年', part: '地球往事', partColor: '#6ea8ff', era: 'ETO 时代',
+    title: '叶文洁与伊文斯会面',
+    characters: ['叶文洁', '伊文斯'],
+    summary: '叶文洁和伊文斯相遇，认同他的理念，把三体的信息分享给他，ETO快速壮大。',
+    chapter: '《地球往事》 第14章',
+    impact: 'ETO从松散的爱好者群体，变成能够稳定接收三体消息的组织。'
+  },
+  {
+    year: '危机纪元 3 年', part: '黑暗森林', partColor: '#b48cff', era: '危机纪元',
+    title: '联合国面壁计划发布会',
+    characters: ['四位面壁者'],
+    summary: '联合国正式公布面壁计划，泰勒、雷迪亚兹、希恩斯、罗辑一同亮相。',
+    chapter: '《黑暗森林》 第7章',
+    impact: '全世界知晓这项对抗三体的特殊计划，智子开始针对面壁者布局破壁。'
+  },
+  {
+    year: '危机纪元 5 年', part: '黑暗森林', partColor: '#b48cff', era: '危机纪元',
+    title: '罗辑隐居湖畔',
+    characters: ['罗辑', '庄颜'],
+    summary: '罗辑利用面壁者权限，远离公众，和庄颜在湖畔安静生活，暂时逃避使命。',
+    chapter: '《黑暗森林》 第9章',
+    impact: '罗辑在这段平静时光里，慢慢思考宇宙社会学的底层逻辑。'
+  },
+  {
+    year: '危机纪元 20 年', part: '黑暗森林', partColor: '#b48cff', era: '危机纪元',
+    title: '希恩斯破壁',
+    characters: ['希恩斯', '山杉惠子'],
+    summary: '山杉惠子作为破壁人揭穿希恩斯的真实目的：思想钢印是为了制造逃亡主义者。',
+    chapter: '《黑暗森林》 第20章',
+    impact: '思想钢印计划暴露，人类开始警惕逃亡主义。'
+  },
+  {
+    year: '危机纪元 205 年', part: '黑暗森林', partColor: '#b48cff', era: '危机纪元',
+    title: '人类太空舰队建成',
+    characters: ['全人类'],
+    summary: '大批恒星级战舰建造完成，人类自以为拥有和三体抗衡的力量，陷入胜利幻想。',
+    chapter: '《黑暗森林》 第24章',
+    impact: '催生了人类的自大心态，为后来水滴的屠杀埋下伏笔。'
+  },
+  {
+    year: '危机纪元 205 年', part: '死神永生', partColor: '#f0b866', era: '危机纪元',
+    title: '程心当选PIA执委会成员',
+    characters: ['程心'],
+    summary: '程心进入行星防御理事会，参与阶梯计划的方案讨论。',
+    chapter: '《死神永生》 第2章',
+    impact: '让程心深度参与到人类应对三体危机的顶层决策之中。'
+  },
+  {
+    year: '广播纪元 8 年', part: '死神永生', partColor: '#f0b866', era: '广播纪元',
+    title: '智子封锁光速科研',
+    characters: ['智子'],
+    summary: '智子持续干扰曲率驱动相关实验，阻碍人类掌握光速航行技术。',
+    chapter: '《死神永生》 第16章',
+    impact: '人类很难自主研发出逃离二向箔打击的曲率飞船。'
+  },
+  {
+    year: '银河纪元', part: '死神永生', partColor: '#f0b866', era: '银河纪元',
+    title: '蓝星黑域建立',
+    characters: ['关一帆', '程心'],
+    summary: '关一帆在蓝星设置黑域，降低该区域光速，让这里变成宇宙安全区。',
+    chapter: '《死神永生》 第24章',
+    impact: '黑域可以避免高等文明清理，但也永久锁死这片区域的科技发展上限。'
+  }
+];
+
+/* ============================================================
+   人物长廊数据
+   ============================================================ */
+const characters = [
+  {
+    name: '叶文洁', honor: '地球三体组织统帅', part: '地球往事', color: '#5eead4',
+    avatar: './avatar/叶文洁.jpg',
+    intro: '天体物理学家，红岸工程中第一个发现太阳增益反射的人。她在绝望中按下发射键，把人类文明的第一声啼鸣送向三体世界。',
+    experiences: ['1969 年进入红岸基地', '1971 年向宇宙发送地球坐标', '1979 年回复三体世界', '1985 年创立 ETO，任统帅'],
+    events: ['太阳的放大器', '“不要回答”', '红岸的坠落', '地球三体组织成立', '叶文洁的黄昏']
+  },
+  {
+    name: '汪淼', honor: '倒计时的见证者', part: '地球往事', color: '#7dd3fc',
+    avatar: './avatar/汪淼.jpg',
+    intro: '纳米材料科学家，“飞刃”的发明者。他在智子的倒计时与三体游戏中第一次看清敌人的轮廓，并亲手参与古筝行动。',
+    experiences: ['2007 年进入三体游戏', '发现视网膜上的倒计时', '参与古筝行动', '见证智子锁死人类基础科学'],
+    events: ['三体游戏', '杨冬之死', '视网膜上的倒计时', '智子抵达', '古筝行动']
+  },
+  {
+    name: '史强', honor: '魔鬼警官', part: '地球往事', color: '#93c5fd',
+    avatar: './avatar/史强.jpg',
+    intro: '刑警、反恐专家，粗粝而敏锐。他保护汪淼与罗辑，在人类最黑暗的时刻提供了一种来自尘土中的坚韧。',
+    experiences: ['参与调查“科学边界”', '执行古筝行动', '危机纪元保护罗辑', '在末日战役前陪伴罗辑苏醒'],
+    events: ['视网膜上的倒计时', '古筝行动', '罗辑的困惑', '罗辑苏醒']
+  },
+  {
+    name: '杨冬', honor: '物理学边界的殉道者', part: '地球往事', color: '#a5d8ff',
+    avatar: './avatar/杨冬.jpg',
+    intro: '叶文洁的女儿，人类最优秀的高能物理学家之一。她在智子的封锁前发现“物理学不存在”，选择以死亡结束追问。',
+    experiences: ['成为高能物理学家', '发现实验结果的混乱', '留下“物理学不存在了”后自杀'],
+    events: ['杨冬出生', '杨冬之死', '智子抵达']
+  },
+  {
+    name: '伊文斯', honor: '降临派领袖', part: '地球往事', color: '#6ee7b7',
+    avatar: './avatar/伊文斯.jpg',
+    intro: '富有的环保主义者，ETO 的实际掌权者。他对人类的失望比叶文洁更彻底，试图让三体文明接管地球。',
+    experiences: ['1982 年与叶文洁相遇', '1985 年共同创立 ETO', '建立“审判日”号海上总部', '在古筝行动中身亡'],
+    events: ['遇见伊文斯', '地球三体组织成立', '“审判日”号启航', '古筝行动']
+  },
+  {
+    name: '常伟思', honor: '太空军首任司令员', part: '黑暗森林', color: '#94a3b8',
+    avatar: './avatar/常伟思.jpg',
+    intro: '中国太空军司令员，章北海的上级。他在危机纪元初期推动太空军建设，为人类留下了一批种子。',
+    experiences: ['组建太空军', '支持章北海的增援未来计划', '在危机纪元初期主持防务'],
+    events: ['危机降临', '面壁计划', '增援未来']
+  },
+  {
+    name: '罗辑', honor: '第一代执剑人', part: '黑暗森林', color: '#7aa2ff',
+    avatar: './avatar/罗辑.jpg',
+    intro: '社会学家、面壁者、执剑人。他从叶文洁的两条公理出发，推演出黑暗森林法则，并以同归于尽的决心为人类换来半个世纪的和平。',
+    experiences: ['危机纪元 3 年成为第四位面壁者', '向宇宙广播恒星 187J3X1 的坐标', '危机纪元 205 年建立黑暗森林威慑', '威慑纪元 62 年将执剑人身份交给程心'],
+    events: ['面壁计划', '咒语', '黑暗森林', '执剑人', '威慑失败']
+  },
+  {
+    name: '章北海', honor: '增援未来计划执行者', part: '黑暗森林', color: '#9bb8ff',
+    avatar: './avatar/章北海.jpg',
+    intro: '太空军政委，最早看清人类必败的人之一。他以冬眠穿越两个世纪，劫持自然选择号驶向深空，为星舰人类保留了火种。',
+    experiences: ['危机纪元 8 年推动增援未来计划', '危机纪元 205 年苏醒并劫持自然选择号', '在黑暗战役中成为星舰地球的奠基者之一'],
+    events: ['增援未来', '罗辑苏醒', '末日战役']
+  },
+  {
+    name: '丁仪', honor: '第一个触摸水滴的人', part: '黑暗森林', color: '#a78bfa',
+    avatar: './avatar/丁仪.jpg',
+    intro: '理论物理学家，宇宙的浪漫主义者。他在末日战役前第一个靠近水滴，用生命为人类换来最后一句警告。',
+    experiences: ['参与面壁计划相关研究', '在危机纪元 205 年接触水滴', '喊出“傻孩子们，快跑啊！”', '与水滴同归于尽'],
+    events: ['水滴', '末日战役']
+  },
+  {
+    name: '云天明', honor: '三个童话的讲述者', part: '死神永生', color: '#c4b5fd',
+    avatar: './avatar/云天明.jpg',
+    intro: '程心的大学同学，送出星星的人。他被三体世界复活，在敌营中用三个童话把宇宙的秘密带回人类。',
+    experiences: ['赠送程心一颗恒星', '大脑被送入三体舰队', '在三体世界复活', '用三个童话传递曲率驱动、黑域与二向箔的秘密'],
+    events: ['三个童话', '蓝星', '死线']
+  },
+  {
+    name: '程心', honor: '第二代执剑人', part: '死神永生', color: '#d8b4fe',
+    avatar: './avatar/程心.jpg',
+    intro: '航天工程师，人类选出的“圣母”。她两次在关键时刻选择爱与人性，也两次把文明推向深渊；她活到了时间之外。',
+    experiences: ['威慑纪元 62 年接任执剑人', '威慑失败后见证引力波广播', '阻止维德的光速飞船计划', '与关一帆进入 647 号宇宙'],
+    events: ['执剑人', '威慑失败', '光速飞船之争', '太阳系二维化', '时间之外']
+  },
+  {
+    name: '维德', honor: '不择手段的前进者', part: '死神永生', color: '#f0b866',
+    avatar: './avatar/维德.jpg',
+    intro: '星环城领袖，极端理性主义者。他相信生存高于道德，最终在程心的选择前放下武器，留下“前进！前进！不择手段地前进！”',
+    experiences: ['推动曲率驱动飞船研究', '宣布星环城独立', '被程心阻止并接受审判', '被处决前留下“前进”'],
+    events: ['光速飞船之争', '星环城']
+  },
+  {
+    name: '智子', honor: '三体世界的使者', part: '死神永生', color: '#f87171',
+    avatar: './avatar/智子.jpg',
+    intro: '由一颗质子展开蚀刻而成的超级智能，三体世界在地球的眼与剑。她锁死人类物理，也在最后以“宇宙很大，生活更大”告别。',
+    experiences: ['锁死人类高能物理', '监视人类世界', '在威慑纪元后操控地球', '在 647 号宇宙陪伴程心与关一帆'],
+    events: ['智子抵达', '三体撤退', '威慑失败', '智子的告别', '时间之外']
+  },
+  {
+    name: '关一帆', honor: '银河纪元学者', part: '死神永生', color: '#a5b4fc',
+    avatar: './avatar/关一帆.jpg',
+    intro: '“万有引力”号上的宇宙学家，后来成为银河纪元的人类学者。他在蓝星与死线之后陪伴程心走向时间之外。',
+    experiences: ['在“万有引力”号上研究宇宙', '与程心在蓝星相遇', '误入死线，经历时间跃迁', '进入 647 号宇宙'],
+    events: ['引力波广播', '蓝星', '死线', '回归运动']
+  },
+  {
+    name: '艾AA', honor: '星环号领航员', part: '死神永生', color: '#f9a8d4',
+    avatar: './avatar/艾AA.jpg',
+    intro: '危机纪元后的年轻一代，程心的同伴。她驾驶星环号带程心逃离二维化的太阳系，也陪她走过漫长的银河纪元。',
+    experiences: ['与程心一同苏醒', '驾驶星环号逃离太阳系', '抵达蓝星', '在死线造成的时间跃迁中度过一生'],
+    events: ['曲率飞船', '蓝星', '死线']
+  }
+];
+
+/* ============================================================
+   基础工具
+   ============================================================ */
+const $ = (selector, root = document) => root.querySelector(selector);
+const $$ = (selector, root = document) => Array.from(root.querySelectorAll(selector));
+const TAU = Math.PI * 2;
+const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+const lerp = (a, b, t) => a + (b - a) * t;
+const smoothstep = (edge0, edge1, value) => {
+  const t = clamp((value - edge0) / (edge1 - edge0), 0, 1);
+  return t * t * (3 - 2 * t);
+};
+const easeInOutCubic = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+
+function hexToRgb(hex) {
+  const clean = String(hex).replace('#', '');
+  if (clean.length !== 6) return '143, 220, 255';
+  return [
+    parseInt(clean.slice(0, 2), 16),
+    parseInt(clean.slice(2, 4), 16),
+    parseInt(clean.slice(4, 6), 16)
+  ].join(', ');
+}
+
+function hexToRgba(hex, alpha) {
+  return `rgba(${hexToRgb(hex)}, ${alpha})`;
+}
+
+function escapeHTML(value) {
+  return String(value).replace(/[&<>"']/g, (ch) => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;'
+  }[ch]));
+}
+
+function seeded(index, salt = 1) {
+  const value = Math.sin(index * 127.1 + salt * 311.7) * 43758.5453123;
+  return value - Math.floor(value);
+}
+
+const pages = {
+  intro: $('#pageIntro'),
+  chronicle: $('#pageChronicle'),
+  characters: $('#pageCharacters')
+};
+const appState = { page: 'intro' };
+
+let toastTimer = null;
+function showToast(message) {
+  const el = $('#toast');
+  if (!el) return;
+  el.textContent = message;
+  el.classList.add('is-visible');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('is-visible'), 2600);
+}
+
+/* ============================================================
+   全局背景音乐
+   ============================================================ */
+const bgm = $('#bgm');
+const audioButtons = $$('.audio-btn');
+const audioVolumes = $$('.audio-volume');
+
+function setAudioVolume(value) {
+  if (!bgm) return;
+  const volume = clamp(Number(value), 0, 1);
+  const percent = `${Math.round(volume * 100)}%`;
+  bgm.volume = volume;
+  audioVolumes.forEach((input) => {
+    input.value = String(volume);
+    input.style.setProperty('--vol', percent);
+    input.setAttribute('aria-valuetext', percent);
+  });
+}
+
+function updateAudioUI() {
+  if (!bgm) return;
+  const playing = !bgm.paused && !bgm.ended;
+  audioButtons.forEach((button) => {
+    button.classList.toggle('is-playing', playing);
+    button.setAttribute('aria-pressed', String(playing));
+    button.setAttribute('aria-label', playing ? '暂停背景音乐' : '播放背景音乐');
+    button.title = playing ? '暂停背景音乐' : '播放背景音乐';
+    const label = button.querySelector('.audio-label');
+    if (label) label.textContent = playing ? '音乐开' : '音乐关';
+  });
+}
+
+function startAudio() {
+  if (!bgm) return;
+  bgm.loop = true;
+  if (!bgm.paused) {
+    updateAudioUI();
+    return;
+  }
+  const playback = bgm.play();
+  if (playback && typeof playback.catch === 'function') {
+    playback.catch(() => {
+      updateAudioUI();
+    });
+  }
+}
+
+function toggleAudio() {
+  if (!bgm) return;
+  if (bgm.paused) startAudio();
+  else bgm.pause();
+}
+
+function initAudio() {
+  if (!bgm) return;
+  bgm.loop = true;
+  setAudioVolume(0.3);
+
+  audioButtons.forEach((button) => {
+    button.addEventListener('click', (event) => {
+      event.stopPropagation();
+      toggleAudio();
+    });
+  });
+
+  audioVolumes.forEach((input) => {
+    input.addEventListener('input', () => setAudioVolume(input.value));
+  });
+
+  const unlockOnPointer = (event) => {
+    if (event.target && event.target.closest && event.target.closest('.audio-btn')) return;
+    startAudio();
+  };
+  const unlockOnClick = (event) => {
+    if (event.target && event.target.closest && event.target.closest('.audio-btn')) return;
+    startAudio();
+  };
+  const unlockOnKey = (event) => {
+    if (event.ctrlKey || event.metaKey || event.altKey) return;
+    if (event.target && event.target.closest && event.target.closest('.audio-btn')) return;
+    startAudio();
+  };
+
+  document.addEventListener('pointerdown', unlockOnPointer, { once: true, capture: true });
+  document.addEventListener('click', unlockOnClick, { once: true, capture: true });
+  document.addEventListener('keydown', unlockOnKey, { once: true, capture: true });
+
+  bgm.addEventListener('play', updateAudioUI);
+  bgm.addEventListener('pause', updateAudioUI);
+  bgm.addEventListener('ended', updateAudioUI);
+  bgm.addEventListener('error', () => {
+    updateAudioUI();
+    showToast('背景音乐加载失败，请检查 ./bgm/bgm.mp3');
+  }, { once: true });
+
+  updateAudioUI();
+}
+
+function setPage(name) {
+  if (!pages[name] || name === appState.page) return;
+  const previous = appState.page;
+
+  if (previous === 'chronicle') cancelChronicle();
+  if (previous === 'characters') closeCharacter(true);
+
+  appState.page = name;
+  Object.entries(pages).forEach(([key, page]) => {
+    const active = key === name;
+    page.classList.toggle('is-active', active);
+    page.inert = !active;
+    page.setAttribute('aria-hidden', String(!active));
+  });
+
+  if (name === 'intro') {
+    pages.intro.scrollTop = 0;
+    intro.trails = [[], [], []];
+    resizeIntro();
+  }
+  if (name === 'chronicle') {
+    requestAnimationFrame(() => {
+      syncChronHeader();
+      resizeChronicle();
+      CHRON.hovered = -1;
+      hideStarTip();
+      if (chronicleView === 'timeline') syncTimelineView();
+      updateChronicleMeta();
+    });
+  }
+  if (name === 'characters') {
+    requestAnimationFrame(() => {
+      updateLaneProgress();
+      laneScrollUpdate();
+    });
+  }
+
+  document.title = name === 'chronicle'
+    ? '编年史 · 三体宇宙'
+    : name === 'characters'
+      ? '人物长廊 · 三体宇宙'
+      : '三体宇宙 · The Three-Body Universe';
+}
+
+$$('[data-goto]').forEach((button) => {
+  button.addEventListener('click', () => setPage(button.dataset.goto));
+});
+
+/* ============================================================
+   开篇 · 三体运动实时演算
+   ============================================================ */
+const intro = {
+  canvas: null,
+  ctx: null,
+  w: 0,
+  h: 0,
+  dpr: 1,
+  bodies: [],
+  trails: [[], [], []],
+  colors: ['#ffd29a', '#a9d6ff', '#d6b4ff'],
+  sprites: [],
+  dust: [],
+  time: 0,
+  hasDrawn: false
+};
+
+function makeGlowSprite(color, size = 128) {
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext('2d');
+  const half = size / 2;
+  const gradient = ctx.createRadialGradient(half, half, 0, half, half, half);
+  gradient.addColorStop(0, 'rgba(255, 255, 255, 1)');
+  gradient.addColorStop(0.07, 'rgba(255, 255, 255, .88)');
+  gradient.addColorStop(0.22, hexToRgba(color, .52));
+  gradient.addColorStop(0.48, hexToRgba(color, .12));
+  gradient.addColorStop(1, hexToRgba(color, 0));
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, size, size);
+  return canvas;
+}
+
+function initIntro() {
+  intro.canvas = $('#introCanvas');
+  if (!intro.canvas) return;
+  intro.ctx = intro.canvas.getContext('2d');
+  if (!intro.ctx) return;
+
+  // 经典“8 字形”三体解（等质量，G = 1）
+  intro.bodies = [
+    { x: -0.97000436, y: 0.24308753, vx: 0.466203685, vy: 0.43236573 },
+    { x: 0.97000436, y: -0.24308753, vx: 0.466203685, vy: 0.43236573 },
+    { x: 0, y: 0, vx: -0.93240737, vy: -0.86473146 }
+  ];
+  intro.sprites = intro.colors.map((color) => makeGlowSprite(color));
+  buildIntroDust();
+  primeIntroTrails();
+  resizeIntro();
+}
+
+function primeIntroTrails() {
+  intro.trails = [[], [], []];
+  for (let i = 0; i < 2800; i += 1) {
+    introVelocityVerlet(.0012);
+    if (i % 14 === 0) {
+      intro.bodies.forEach((body, index) => {
+        intro.trails[index].push({ x: body.x, y: body.y });
+      });
+    }
+  }
+  intro.trails.forEach((trail) => {
+    if (trail.length > 150) trail.splice(0, trail.length - 150);
+  });
+}
+
+function buildIntroDust() {
+  intro.dust = Array.from({ length: 210 }, (_, index) => ({
+    x: seeded(index, 1),
+    y: seeded(index, 2),
+    size: seeded(index, 3) > .86 ? 1.7 : 1,
+    alpha: .14 + seeded(index, 4) * .44,
+    speed: .3 + seeded(index, 5) * .7,
+    phase: seeded(index, 6) * TAU
+  }));
+}
+
+function resizeIntro() {
+  if (!intro.canvas || !intro.ctx) return;
+  const width = window.innerWidth;
+  const height = window.innerHeight;
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  intro.w = width;
+  intro.h = height;
+  intro.dpr = dpr;
+  intro.canvas.width = Math.round(width * dpr);
+  intro.canvas.height = Math.round(height * dpr);
+  intro.canvas.style.width = `${width}px`;
+  intro.canvas.style.height = `${height}px`;
+  intro.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  intro.hasDrawn = false;
+}
+
+function introAccelerations(bodies) {
+  const acc = bodies.map(() => ({ x: 0, y: 0 }));
+  const softening = 0.0012;
+  for (let i = 0; i < bodies.length; i += 1) {
+    for (let j = i + 1; j < bodies.length; j += 1) {
+      const dx = bodies[j].x - bodies[i].x;
+      const dy = bodies[j].y - bodies[i].y;
+      const distanceSq = dx * dx + dy * dy + softening;
+      const inverse = 1 / (distanceSq * Math.sqrt(distanceSq));
+      acc[i].x += dx * inverse;
+      acc[i].y += dy * inverse;
+      acc[j].x -= dx * inverse;
+      acc[j].y -= dy * inverse;
+    }
+  }
+  return acc;
+}
+
+function introVelocityVerlet(step) {
+  const bodies = intro.bodies;
+  const acc = introAccelerations(bodies);
+  bodies.forEach((body, i) => {
+    body.vx += acc[i].x * step * .5;
+    body.vy += acc[i].y * step * .5;
+    body.x += body.vx * step;
+    body.y += body.vy * step;
+  });
+  const next = introAccelerations(bodies);
+  bodies.forEach((body, i) => {
+    body.vx += next[i].x * step * .5;
+    body.vy += next[i].y * step * .5;
+  });
+
+  // 抵消积分误差造成的质心漂移
+  let cx = 0, cy = 0, cvx = 0, cvy = 0;
+  bodies.forEach((body) => { cx += body.x; cy += body.y; cvx += body.vx; cvy += body.vy; });
+  cx /= bodies.length; cy /= bodies.length; cvx /= bodies.length; cvy /= bodies.length;
+  bodies.forEach((body) => {
+    body.x -= cx;
+    body.y -= cy;
+    body.vx -= cvx;
+    body.vy -= cvy;
+  });
+}
+
+function updateIntro(dt) {
+  if (!intro.ctx) return;
+  if (reducedMotion) return;
+
+  intro.time += dt / 1000;
+  const simDt = Math.min(dt, 42) / 1000 * 0.18;
+  const steps = 4;
+  const step = simDt / steps;
+  for (let i = 0; i < steps; i += 1) introVelocityVerlet(step);
+
+  intro.bodies.forEach((body, i) => {
+    const trail = intro.trails[i];
+    const last = trail[trail.length - 1];
+    if (!last || Math.hypot(body.x - last.x, body.y - last.y) > 0.001) {
+      trail.push({ x: body.x, y: body.y });
+      if (trail.length > 150) trail.shift();
+    }
+  });
+}
+
+function renderIntro() {
+  const ctx = intro.ctx;
+  if (!ctx) return;
+  const { w, h } = intro;
+  ctx.clearRect(0, 0, w, h);
+
+  // 背景星尘
+  for (const dust of intro.dust) {
+    const twinkle = .55 + .45 * Math.sin(intro.time * dust.speed + dust.phase);
+    ctx.globalAlpha = dust.alpha * twinkle;
+    ctx.fillStyle = '#d8e9ff';
+    ctx.fillRect(dust.x * w, dust.y * h, dust.size, dust.size);
+  }
+  ctx.globalAlpha = 1;
+
+  const scale = w < 700
+    ? Math.min(w * .44, h * .31)
+    : Math.min(w * .66, h * .46);
+  const cx = w / 2;
+  const cy = h * .5;
+  const rotation = intro.time * .006;
+  const cos = Math.cos(rotation);
+  const sin = Math.sin(rotation);
+
+  const toScreen = (point) => ({
+    x: cx + (point.x * cos - point.y * sin) * scale,
+    y: cy - (point.x * sin + point.y * cos) * scale
+  });
+
+  // 发光轨迹
+  ctx.globalCompositeOperation = 'lighter';
+  intro.bodies.forEach((body, index) => {
+    const trail = intro.trails[index];
+    if (trail.length < 2) return;
+    const color = intro.colors[index];
+    for (let pass = 0; pass < 2; pass += 1) {
+      ctx.beginPath();
+      trail.forEach((point, pointIndex) => {
+        const screen = toScreen(point);
+        if (pointIndex === 0) ctx.moveTo(screen.x, screen.y);
+        else ctx.lineTo(screen.x, screen.y);
+      });
+      ctx.strokeStyle = hexToRgba(color, pass === 0 ? .075 : .18);
+      ctx.lineWidth = pass === 0 ? 5 : 1.2;
+      ctx.stroke();
+    }
+  });
+
+  // 恒星本体
+  intro.bodies.forEach((body, index) => {
+    const screen = toScreen(body);
+    const sprite = intro.sprites[index];
+    const pulse = .92 + .08 * Math.sin(intro.time * 1.3 + index * 2.2);
+    const halo = 98 * pulse;
+    ctx.globalAlpha = .8;
+    ctx.drawImage(sprite, screen.x - halo / 2, screen.y - halo / 2, halo, halo);
+    ctx.globalAlpha = 1;
+    ctx.beginPath();
+    ctx.arc(screen.x, screen.y, 1.7, 0, TAU);
+    ctx.fillStyle = '#ffffff';
+    ctx.fill();
+  });
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.globalAlpha = 1;
+  intro.hasDrawn = true;
+}
+
+/* ============================================================
+   编年史 · 球形星穹
+   ============================================================ */
+const CHRON = {
+  canvas: null,
+  ctx: null,
+  w: 0,
+  h: 0,
+  dpr: 1,
+  cx: 0,
+  cy: 0,
+  focal: 0,
+  cameraDist: 3.2,
+  stars: [],
+  dust: [],
+  sphereDust: [],
+  projected: [],
+  sprites: {},
+  yaw: 0,
+  pitch: 0,
+  targetYaw: 0,
+  targetPitch: 0,
+  zoom: 1,
+  zoomTarget: 1,
+  mouse: { x: 0, y: 0, nx: 0, ny: 0, active: false },
+  hovered: -1,
+  selected: -1,
+  mode: 'idle',
+  flight: null,
+  filter: null,
+  query: '',
+  matches: new Set(),
+  locked: false,
+  time: 0,
+  ready: false,
+  cardTimer: null,
+  returnTimer: null,
+  cardOpening: false
+};
+
+const chronCanvas = $('#chronCanvas');
+const hintTouch = $('.hint-touch');
+const chronCount = $('#chronCount');
+const chronFilterState = $('#chronFilterState');
+const searchState = $('#searchState');
+const searchInput = $('#chronSearch');
+const searchBox = $('#chronSearchBox');
+const searchClear = $('#chronClear');
+const starTip = $('#starTip');
+const tipPart = $('#tipPart');
+const tipTitle = $('#tipTitle');
+const tipPeople = $('#tipPeople');
+const focusLayer = $('#focusLayer');
+const focusPart = $('#focusPart');
+const focusYear = $('#focusYear');
+const focusTitle = $('#focusTitle');
+const detailLayer = $('#detailLayer');
+const eventCard = $('#eventCard');
+const eventCardClose = $('#eventCardClose');
+const cardPart = $('#cardPart');
+const cardYear = $('#cardYear');
+const eventCardTitle = $('#eventCardTitle');
+const cardPeople = $('#cardPeople');
+const cardSummary = $('#cardSummary');
+const cardChapter = $('#cardChapter');
+const cardImpact = $('#cardImpact');
+
+const viewButtons = $$('.view-btn');
+const timelineView = $('#timelineView');
+const timelineList = $('#timelineList');
+const timelineScroll = $('#timelineScroll');
+const timelineCount = $('#timelineCount');
+const timelinePanel = $('#timelinePanel');
+const timelineEmpty = $('#timelineEmpty');
+const timelineDetail = $('#timelineDetail');
+const timelineClose = $('#timelineClose');
+const timelinePart = $('#timelinePart');
+const timelineYear = $('#timelineYear');
+const timelineTitle = $('#timelineTitle');
+const timelinePeople = $('#timelinePeople');
+const timelineSummary = $('#timelineSummary');
+const timelineChapter = $('#timelineChapter');
+const timelineImpact = $('#timelineImpact');
+
+let chronicleView = 'stars';
+const timelineState = { selected: -1 };
+
+function initChronicle() {
+  CHRON.canvas = $('#chronCanvas');
+  if (!CHRON.canvas) return;
+  CHRON.ctx = CHRON.canvas.getContext('2d');
+  if (!CHRON.ctx) return;
+
+  const total = timelineData.length;
+  CHRON.stars = timelineData.map((event, index) => {
+    // 时间顺序映射到纬度：早期事件在球体下方，晚期事件向上生长；
+    // 经度用黄金角铺开，让所有事件点均匀覆盖整颗星穹。
+    const t = (index + .5) / total;
+    const lat = Math.asin(-1 + 2 * t) + (seeded(index, 9) - .5) * .018;
+    const lon = index * 2.399963229728653 + .65 + (seeded(index, 10) - .5) * .025;
+    const radius = 1 + (seeded(index, 8) - .5) * .05;
+    return {
+      x: Math.cos(lat) * Math.cos(lon) * radius,
+      y: Math.sin(lat) * radius,
+      z: Math.cos(lat) * Math.sin(lon) * radius,
+      event,
+      index,
+      baseSize: 1.15 + seeded(index, 11) * 1.55,
+      alpha: null,
+      scale: 1,
+      screen: { x: 0, y: 0, z: 0, size: 1 }
+    };
+  });
+
+  CHRON.dust = Array.from({ length: 175 }, (_, index) => ({
+    x: seeded(index, 21),
+    y: seeded(index, 22),
+    size: seeded(index, 23) > .9 ? 1.5 : 1,
+    alpha: .1 + seeded(index, 24) * .36,
+    speed: .35 + seeded(index, 25) * .8,
+    phase: seeded(index, 26) * TAU,
+    depth: .2 + seeded(index, 27) * .8
+  }));
+
+  CHRON.sphereDust = Array.from({ length: 135 }, (_, index) => {
+    const vertical = seeded(index, 41) * 2 - 1;
+    const angle = seeded(index, 42) * TAU;
+    const horizontal = Math.sqrt(1 - vertical * vertical);
+    const radius = .55 + seeded(index, 43) * .68;
+    return {
+      x: Math.cos(angle) * horizontal * radius,
+      y: vertical * radius,
+      z: Math.sin(angle) * horizontal * radius,
+      baseSize: .22 + seeded(index, 44) * .42,
+      alpha: .045 + seeded(index, 45) * .14,
+      phase: seeded(index, 46) * TAU,
+      speed: .2 + seeded(index, 47) * .5
+    };
+  });
+
+  Object.entries(PARTS).forEach(([, meta]) => {
+    CHRON.sprites[meta.color] = makeGlowSprite(meta.color);
+  });
+
+  CHRON.ready = true;
+  resizeChronicle();
+  updateChronicleMeta();
+}
+
+function syncChronHeader() {
+  const page = pages.chronicle;
+  const bar = $('.chron-bar');
+  if (!page || !bar) return;
+  page.style.setProperty('--chron-header', `${bar.offsetHeight}px`);
+}
+
+function buildTimelineView() {
+  if (!timelineList) return;
+  timelineList.innerHTML = timelineData.map((event, index) => `
+    <li class="tl-row" data-index="${index}" style="--pc:${event.partColor}">
+      <button class="tl-item" type="button" aria-pressed="false">
+        <span class="tl-node" aria-hidden="true"></span>
+        <span class="tl-body">
+          <span class="tl-top">
+            <span class="tl-year">${escapeHTML(event.year)}</span>
+            <span class="tl-part">${escapeHTML(event.part)}</span>
+          </span>
+          <span class="tl-title">${escapeHTML(event.title)}</span>
+        </span>
+      </button>
+    </li>
+  `).join('');
+  if (timelineCount) timelineCount.textContent = `${timelineData.length} 个事件`;
+  syncTimelineView();
+}
+
+function fillTimelineDetail(event) {
+  timelineDetail.style.setProperty('--accent', event.partColor);
+  timelineDetail.style.setProperty('--accent-rgb', hexToRgb(event.partColor));
+  timelinePart.textContent = event.part;
+  timelineYear.textContent = event.year;
+  timelineTitle.textContent = event.title;
+  timelinePeople.innerHTML = [
+    '<span class="people-label">关键人物</span>',
+    ...event.characters.map((name) => `<span class="person-chip">${escapeHTML(name)}</span>`)
+  ].join('');
+  timelineSummary.textContent = event.summary;
+  timelineChapter.textContent = event.chapter;
+  timelineImpact.textContent = event.impact;
+}
+
+function clearTimelineSelection() {
+  timelineState.selected = -1;
+  if (timelineDetail) timelineDetail.hidden = true;
+  if (timelineEmpty) timelineEmpty.hidden = false;
+  if (timelineClose) timelineClose.hidden = true;
+  if (timelineView) timelineView.classList.remove('is-detail-open');
+  $$('.tl-row.is-active', timelineList).forEach((row) => {
+    row.classList.remove('is-active');
+    const button = row.querySelector('.tl-item');
+    if (button) button.setAttribute('aria-pressed', 'false');
+  });
+}
+
+function selectTimelineEvent(index) {
+  const event = timelineData[index];
+  if (!event) return;
+  const searchMatch = Boolean(CHRON.query.trim()) && CHRON.matches.has(index);
+  if (CHRON.filter && event.part !== CHRON.filter && !searchMatch) return;
+
+  timelineState.selected = index;
+  $$('.tl-row', timelineList).forEach((row) => {
+    const active = Number(row.dataset.index) === index;
+    row.classList.toggle('is-active', active);
+    const button = row.querySelector('.tl-item');
+    if (button) button.setAttribute('aria-pressed', String(active));
+  });
+
+  fillTimelineDetail(event);
+  timelineDetail.hidden = false;
+  timelineEmpty.hidden = true;
+  timelineClose.hidden = false;
+  timelineView.classList.add('is-detail-open');
+  timelineDetail.scrollTop = 0;
+}
+
+function syncTimelineView() {
+  if (!timelineList) return;
+  const query = CHRON.query.trim();
+  const hasQuery = Boolean(query);
+  const visibleRows = [];
+
+  $$('.tl-row', timelineList).forEach((row) => {
+    const index = Number(row.dataset.index);
+    const event = timelineData[index];
+    if (!event) return;
+    const matched = hasQuery && CHRON.matches.has(index);
+    const filteredOut = Boolean(CHRON.filter)
+      && event.part !== CHRON.filter
+      && !matched;
+
+    row.classList.toggle('is-hidden', filteredOut);
+    row.classList.toggle('is-match', hasQuery && matched);
+    row.classList.toggle('is-dim', hasQuery && !matched);
+    row.classList.toggle('is-active', index === timelineState.selected);
+
+    const button = row.querySelector('.tl-item');
+    if (button) button.setAttribute('aria-pressed', String(index === timelineState.selected));
+    if (!filteredOut) visibleRows.push(index);
+  });
+
+  if (timelineState.selected >= 0) {
+    const selected = timelineData[timelineState.selected];
+    const selectedMatches = Boolean(query) && CHRON.matches.has(timelineState.selected);
+    if (selected && CHRON.filter && selected.part !== CHRON.filter && !selectedMatches) {
+      clearTimelineSelection();
+    }
+  }
+
+  if (timelineCount) {
+    if (hasQuery) timelineCount.textContent = `${CHRON.matches.size} 个命中`;
+    else timelineCount.textContent = `${visibleRows.length} 个事件`;
+  }
+
+  if (chronicleView === 'timeline' && hasQuery && CHRON.matches.size) {
+    const first = Array.from(CHRON.matches).find((index) => {
+      const event = timelineData[index];
+      return !CHRON.filter || event.part === CHRON.filter;
+    });
+    if (first !== undefined) {
+      const row = timelineList.querySelector(`.tl-row[data-index="${first}"]`);
+      if (row) {
+        const rowRect = row.getBoundingClientRect();
+        const scrollRect = timelineScroll.getBoundingClientRect();
+        if (rowRect.top < scrollRect.top + 30 || rowRect.bottom > scrollRect.bottom - 30) {
+          row.scrollIntoView({
+            behavior: reducedMotion ? 'auto' : 'smooth',
+            block: 'center'
+          });
+        }
+      }
+    }
+  }
+}
+
+function setChronicleView(view) {
+  if (view !== 'stars' && view !== 'timeline') return;
+  if (view === chronicleView) return;
+
+  if (view === 'timeline') {
+    cancelChronicle();
+    hideStarTip();
+    CHRON.hovered = -1;
+  }
+
+  chronicleView = view;
+  pages.chronicle.classList.toggle('is-timeline-view', view === 'timeline');
+  timelineView.setAttribute('aria-hidden', String(view !== 'timeline'));
+
+  viewButtons.forEach((button) => {
+    const active = button.dataset.view === view;
+    button.classList.toggle('is-active', active);
+    button.setAttribute('aria-pressed', String(active));
+  });
+
+  syncChronHeader();
+
+  if (view === 'timeline') {
+    syncTimelineView();
+    requestAnimationFrame(syncChronHeader);
+  } else {
+    resizeChronicle();
+    hideStarTip();
+    CHRON.hovered = -1;
+    CHRON.canvas?.classList.remove('is-pointer');
+    updateChronicleMeta();
+  }
+}
+
+viewButtons.forEach((button) => {
+  button.addEventListener('click', () => setChronicleView(button.dataset.view));
+});
+
+timelineList.addEventListener('click', (event) => {
+  const button = event.target.closest('.tl-item');
+  if (!button) return;
+  const row = button.closest('.tl-row');
+  if (!row || row.classList.contains('is-hidden')) return;
+  selectTimelineEvent(Number(row.dataset.index));
+});
+
+timelineClose.addEventListener('click', clearTimelineSelection);
+
+function projectStar(star) {
+  const cy = Math.cos(CHRON.yaw);
+  const sy = Math.sin(CHRON.yaw);
+  const cp = Math.cos(CHRON.pitch);
+  const sp = Math.sin(CHRON.pitch);
+
+  const x1 = star.x * cy - star.z * sy;
+  const z1 = star.x * sy + star.z * cy;
+  const y1 = star.y * cp - z1 * sp;
+  const z2 = star.y * sp + z1 * cp;
+
+  const focal = CHRON.focal * CHRON.zoom;
+  const perspective = focal / (CHRON.cameraDist - z2);
+  const reference = focal / CHRON.cameraDist;
+  const depth = (z2 + 1) / 2;
+  const size = star.baseSize * (perspective / reference) * (.72 + depth * .62);
+
+  return {
+    x: CHRON.cx + x1 * perspective,
+    y: CHRON.cy - y1 * perspective,
+    z: z2,
+    depth,
+    size
+  };
+}
+
+function resizeChronicle() {
+  if (!CHRON.canvas || !CHRON.ctx) return;
+  const width = window.innerWidth;
+  const height = window.innerHeight;
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  CHRON.w = width;
+  CHRON.h = height;
+  CHRON.dpr = dpr;
+  CHRON.canvas.width = Math.round(width * dpr);
+  CHRON.canvas.height = Math.round(height * dpr);
+  CHRON.canvas.style.width = `${width}px`;
+  CHRON.canvas.style.height = `${height}px`;
+  CHRON.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+  CHRON.cx = width / 2;
+  CHRON.cy = height * (width < 700 ? .57 : .52);
+  const radius = Math.min(width * .46, height * (width < 700 ? .36 : .40));
+  CHRON.focal = radius * (CHRON.cameraDist - 1);
+  CHRON.stars.forEach((star) => { star.screen = projectStar(star); });
+}
+
+function starIsFilteredOut(index) {
+  if (!CHRON.filter) return false;
+  if (CHRON.stars[index].event.part === CHRON.filter) return false;
+  // 搜索优先：即使篇章被筛掉，命中的星点仍然显形并闪烁。
+  return !(CHRON.query.trim() && CHRON.matches.has(index));
+}
+
+function hitTestStar(x, y) {
+  let found = -1;
+  let bestScore = -Infinity;
+  CHRON.stars.forEach((star, index) => {
+    if (starIsFilteredOut(index)) return;
+    const screen = star.screen;
+    if (!screen) return;
+    const distance = Math.hypot(x - screen.x, y - screen.y);
+    const threshold = Math.max(11, screen.size * 2.6);
+    if (distance > threshold) return;
+    const score = screen.z * 2 - distance / threshold;
+    if (score > bestScore) {
+      bestScore = score;
+      found = index;
+    }
+  });
+  return found;
+}
+
+function showStarTip(star) {
+  const event = star.event;
+  tipPart.textContent = `${event.part} / ${event.year}`;
+  tipPart.style.setProperty('--tip-color', event.partColor);
+  tipPart.style.color = event.partColor;
+  tipTitle.textContent = event.title;
+  tipPeople.textContent = event.characters.join(' · ');
+  starTip.style.setProperty('--tip-color', event.partColor);
+  starTip.classList.add('is-visible');
+}
+
+function hideStarTip() {
+  starTip.classList.remove('is-visible');
+}
+
+function positionStarTip(star) {
+  if (!star || !star.screen) return;
+  const x = clamp(star.screen.x, 138, CHRON.w - 138);
+  const y = clamp(star.screen.y, 62, CHRON.h - 24);
+  starTip.style.left = `${x}px`;
+  starTip.style.top = `${y}px`;
+  starTip.style.transform = star.screen.y < 140
+    ? 'translate(-50%, 15px)'
+    : 'translate(-50%, calc(-100% - 14px))';
+}
+
+function setHoveredStar(index) {
+  if (CHRON.hovered === index) return;
+  CHRON.hovered = index;
+  CHRON.canvas.classList.toggle('is-pointer', index >= 0);
+  if (index >= 0) {
+    showStarTip(CHRON.stars[index]);
+    positionStarTip(CHRON.stars[index]);
+  } else {
+    hideStarTip();
+  }
+}
+
+function getStarSprite(color) {
+  return CHRON.sprites[color] || CHRON.sprites[PARTS['地球往事'].color];
+}
+
+function setFocusContent(event) {
+  focusPart.textContent = event.part;
+  focusPart.style.color = event.partColor;
+  focusYear.textContent = event.year;
+  focusTitle.textContent = event.title;
+  focusLayer.style.setProperty('--focus-color', event.partColor);
+}
+
+function selectStar(index) {
+  if (CHRON.mode !== 'idle' || index < 0) return;
+  const star = CHRON.stars[index];
+  if (!star) return;
+
+  CHRON.selected = index;
+  CHRON.mode = 'in';
+  CHRON.locked = true;
+  CHRON.targetYaw = CHRON.yaw;
+  CHRON.targetPitch = CHRON.pitch;
+  CHRON.zoomTarget = CHRON.zoom;
+  CHRON.hovered = -1;
+  hideStarTip();
+  CHRON.canvas.classList.remove('is-pointer');
+
+  const start = projectStar(star);
+  const target = { x: CHRON.w / 2, y: CHRON.h * .5 };
+  const dx = target.x - start.x;
+  const dy = target.y - start.y;
+  const length = Math.hypot(dx, dy) || 1;
+  const side = index % 2 === 0 ? 1 : -1;
+  const ctrl = {
+    x: (start.x + target.x) / 2 - dy / length * side * 86,
+    y: (start.y + target.y) / 2 + dx / length * side * 86
+  };
+
+  CHRON.flight = {
+    from: { x: start.x, y: start.y },
+    to: target,
+    ctrl,
+    startTime: performance.now(),
+    duration: 900,
+    trail: [],
+    pos: { x: start.x, y: start.y }
+  };
+
+  setFocusContent(star.event);
+  focusLayer.style.opacity = '0';
+  focusLayer.classList.remove('is-focused');
+  focusLayer.setAttribute('aria-hidden', 'false');
+  focusTitle.style.transform = 'translateY(12px)';
+}
+
+function finishFocusFlight() {
+  if (CHRON.mode !== 'in') return;
+  CHRON.mode = 'focused';
+  focusLayer.style.opacity = '1';
+  focusLayer.classList.add('is-focused');
+  focusLayer.setAttribute('aria-hidden', 'false');
+  focusTitle.style.transform = 'translateY(0)';
+  focusTitle.focus({ preventScroll: true });
+}
+
+function openEventCard() {
+  if (CHRON.mode !== 'focused') return;
+  const event = timelineData[CHRON.selected];
+  if (!event) return;
+
+  CHRON.mode = 'card';
+  CHRON.cardOpening = true;
+  focusTitle.classList.add('is-flashing');
+  clearTimeout(CHRON.cardTimer);
+  CHRON.cardTimer = setTimeout(() => {
+    CHRON.cardOpening = false;
+    focusTitle.classList.remove('is-flashing');
+    focusLayer.classList.remove('is-focused');
+    focusLayer.style.opacity = '0';
+    focusLayer.setAttribute('aria-hidden', 'true');
+
+    fillEventCard(event);
+    detailLayer.classList.add('is-open');
+    detailLayer.setAttribute('aria-hidden', 'false');
+    eventCardClose.focus({ preventScroll: true });
+  }, 280);
+}
+
+function fillEventCard(event) {
+  eventCard.style.setProperty('--accent', event.partColor);
+  eventCard.style.setProperty('--accent-rgb', hexToRgb(event.partColor));
+  cardPart.textContent = event.part;
+  cardYear.textContent = event.year;
+  eventCardTitle.textContent = event.title;
+  cardPeople.innerHTML = [
+    '<span class="people-label">关键人物</span>',
+    ...event.characters.map((name) => `<span class="person-chip">${escapeHTML(name)}</span>`)
+  ].join('');
+  cardSummary.textContent = event.summary;
+  cardChapter.textContent = event.chapter;
+  cardImpact.textContent = event.impact;
+}
+
+function closeEventCard() {
+  if (CHRON.mode !== 'card') return;
+  clearTimeout(CHRON.cardTimer);
+  if (CHRON.cardOpening) {
+    CHRON.cardOpening = false;
+    focusTitle.classList.remove('is-flashing');
+    cancelChronicle();
+    return;
+  }
+  CHRON.mode = 'closing';
+  detailLayer.classList.remove('is-open');
+  detailLayer.setAttribute('aria-hidden', 'true');
+
+  focusLayer.style.opacity = '1';
+  focusLayer.classList.add('is-focused');
+  focusLayer.setAttribute('aria-hidden', 'false');
+  focusTitle.focus({ preventScroll: true });
+
+  clearTimeout(CHRON.returnTimer);
+  CHRON.returnTimer = setTimeout(() => {
+    if (CHRON.mode === 'closing') startReturnFlight();
+  }, 300);
+}
+
+function startReturnFlight() {
+  if (CHRON.selected < 0) {
+    cancelChronicle();
+    return;
+  }
+  const star = CHRON.stars[CHRON.selected];
+  const home = projectStar(star);
+  const start = { x: CHRON.w / 2, y: CHRON.h * .5 };
+  const dx = home.x - start.x;
+  const dy = home.y - start.y;
+  const length = Math.hypot(dx, dy) || 1;
+  const side = CHRON.selected % 2 === 0 ? 1 : -1;
+  const ctrl = CHRON.flight
+    ? { ...CHRON.flight.ctrl }
+    : {
+        x: (start.x + home.x) / 2 - dy / length * side * 86,
+        y: (start.y + home.y) / 2 + dx / length * side * 86
+      };
+
+  CHRON.mode = 'out';
+  focusLayer.classList.remove('is-focused');
+  focusLayer.setAttribute('aria-hidden', 'true');
+  focusTitle.style.transform = 'translateY(0)';
+  CHRON.flight = {
+    from: start,
+    to: { x: home.x, y: home.y },
+    ctrl,
+    startTime: performance.now(),
+    duration: 840,
+    trail: [],
+    pos: start
+  };
+}
+
+function finishReturnFlight() {
+  CHRON.mode = 'idle';
+  CHRON.selected = -1;
+  CHRON.flight = null;
+  CHRON.locked = false;
+  focusLayer.style.opacity = '0';
+  focusLayer.classList.remove('is-focused');
+  focusLayer.setAttribute('aria-hidden', 'true');
+  detailLayer.classList.remove('is-open');
+  detailLayer.setAttribute('aria-hidden', 'true');
+  if (document.activeElement === focusTitle) focusTitle.blur();
+  CHRON.targetYaw = CHRON.mouse.active ? CHRON.mouse.nx * .2 : 0;
+  CHRON.targetPitch = CHRON.mouse.active ? CHRON.mouse.ny * -.12 : 0;
+  updateChronicleMeta();
+}
+
+function cancelChronicle() {
+  if (!CHRON.ready) return;
+  clearTimeout(CHRON.cardTimer);
+  clearTimeout(CHRON.returnTimer);
+  CHRON.mode = 'idle';
+  CHRON.selected = -1;
+  CHRON.flight = null;
+  CHRON.locked = false;
+  CHRON.hovered = -1;
+  CHRON.cardOpening = false;
+  focusLayer.style.opacity = '0';
+  focusLayer.classList.remove('is-focused');
+  focusLayer.setAttribute('aria-hidden', 'true');
+  focusTitle.classList.remove('is-flashing');
+  detailLayer.classList.remove('is-open');
+  detailLayer.setAttribute('aria-hidden', 'true');
+  CHRON.canvas?.classList.remove('is-pointer');
+  hideStarTip();
+}
+
+function updateChronicleMeta() {
+  if (!CHRON.ready) return;
+  const visible = CHRON.stars.filter((star) => !CHRON.filter || star.event.part === CHRON.filter).length;
+  chronCount.textContent = `${visible} EVENTS`;
+  chronFilterState.textContent = CHRON.filter || '全部篇章';
+
+  if (CHRON.query) {
+    const crossPart = Boolean(CHRON.filter)
+      && Array.from(CHRON.matches).some((index) => timelineData[index].part !== CHRON.filter);
+    const searchText = CHRON.matches.size
+      ? `${CHRON.matches.size} 个命中${crossPart ? ' · 跨篇章' : ''}`
+      : '未找到匹配';
+    searchState.textContent = searchText;
+    searchState.classList.toggle('searching', CHRON.matches.size > 0);
+    if (hintTouch) hintTouch.textContent = searchText;
+  } else {
+    searchState.textContent = '悬停星点 · 点击进入';
+    searchState.classList.remove('searching');
+    if (hintTouch) hintTouch.textContent = '时间自下而上 · 轻触星点';
+  }
+
+  $$('.part-btn').forEach((button) => {
+    const active = button.dataset.part === CHRON.filter;
+    button.classList.toggle('is-active', active);
+    button.setAttribute('aria-pressed', String(active));
+  });
+
+  if (timelineList && timelineList.children.length) syncTimelineView();
+}
+
+function applyChronicleQuery() {
+  const query = CHRON.query.trim().toLowerCase();
+  CHRON.matches = new Set();
+  if (query) {
+    timelineData.forEach((event, index) => {
+      const haystack = [
+        event.title,
+        event.characters.join(' '),
+        event.summary,
+        event.part,
+        event.era,
+        event.year,
+        event.chapter,
+        event.impact
+      ].join(' ').toLowerCase();
+      if (haystack.includes(query)) CHRON.matches.add(index);
+    });
+  }
+  searchBox.classList.toggle('has-query', Boolean(CHRON.query.trim()));
+  updateChronicleMeta();
+}
+
+function resetChronicleInteractionBeforeControl() {
+  if (CHRON.mode !== 'idle') cancelChronicle();
+}
+
+/* 输入与筛选 */
+$$('.part-btn').forEach((button) => {
+  button.addEventListener('click', () => {
+    resetChronicleInteractionBeforeControl();
+    const part = button.dataset.part;
+    CHRON.filter = CHRON.filter === part ? null : part;
+    updateChronicleMeta();
+  });
+});
+
+searchInput.addEventListener('input', () => {
+  resetChronicleInteractionBeforeControl();
+  CHRON.query = searchInput.value;
+  searchClear.classList.toggle('is-visible', Boolean(CHRON.query));
+  applyChronicleQuery();
+});
+
+searchClear.addEventListener('click', () => {
+  resetChronicleInteractionBeforeControl();
+  searchInput.value = '';
+  CHRON.query = '';
+  applyChronicleQuery();
+  searchInput.focus();
+});
+
+searchInput.addEventListener('keydown', (event) => {
+  if (event.key !== 'Escape') return;
+  event.preventDefault();
+  event.stopPropagation();
+  resetChronicleInteractionBeforeControl();
+  searchInput.value = '';
+  CHRON.query = '';
+  applyChronicleQuery();
+  searchInput.blur();
+});
+
+/* 星空交互 */
+chronCanvas?.addEventListener('wheel', (event) => {
+  if (!CHRON.ready || CHRON.mode !== 'idle') return;
+  event.preventDefault();
+  const delta = Math.abs(event.deltaY) >= Math.abs(event.deltaX) ? event.deltaY : event.deltaX;
+  if (!delta) return;
+  CHRON.zoomTarget = clamp(CHRON.zoomTarget - Math.sign(delta) * .07, .76, 1.3);
+}, { passive: false });
+
+chronCanvas?.addEventListener('pointermove', (event) => {
+  if (!CHRON.ready || CHRON.mode !== 'idle') return;
+  const rect = CHRON.canvas.getBoundingClientRect();
+  const x = event.clientX - rect.left;
+  const y = event.clientY - rect.top;
+  CHRON.mouse.x = x;
+  CHRON.mouse.y = y;
+  CHRON.mouse.active = true;
+
+  if (event.pointerType !== 'mouse') return;
+  CHRON.mouse.nx = x / CHRON.w - .5;
+  CHRON.mouse.ny = y / CHRON.h - .5;
+  if (!CHRON.locked) {
+    CHRON.targetYaw = CHRON.mouse.nx * .2;
+    CHRON.targetPitch = CHRON.mouse.ny * -.12;
+  }
+  setHoveredStar(hitTestStar(x, y));
+});
+
+chronCanvas?.addEventListener('pointerleave', () => {
+  CHRON.mouse.active = false;
+  if (!CHRON.locked) {
+    CHRON.targetYaw = 0;
+    CHRON.targetPitch = 0;
+  }
+  if (CHRON.mode === 'idle') setHoveredStar(-1);
+});
+
+chronCanvas?.addEventListener('click', (event) => {
+  if (!CHRON.ready || CHRON.mode !== 'idle') return;
+  const rect = CHRON.canvas.getBoundingClientRect();
+  const index = hitTestStar(event.clientX - rect.left, event.clientY - rect.top);
+  if (index >= 0) selectStar(index);
+});
+
+chronCanvas?.addEventListener('keydown', (event) => {
+  if (!CHRON.ready || CHRON.mode !== 'idle') return;
+  const visible = CHRON.stars
+    .map((_, index) => index)
+    .filter((index) => !starIsFilteredOut(index));
+  if (!visible.length) return;
+
+  if (event.key === 'Enter' || event.key === ' ') {
+    event.preventDefault();
+    const index = CHRON.hovered >= 0 ? CHRON.hovered : visible[0];
+    if (!starIsFilteredOut(index)) selectStar(index);
+    return;
+  }
+
+  if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+  event.preventDefault();
+  const direction = event.key === 'ArrowRight' ? 1 : -1;
+  let position = visible.indexOf(CHRON.hovered);
+  if (position === -1) position = direction > 0 ? -1 : 0;
+  const next = visible[(position + direction + visible.length) % visible.length];
+  setHoveredStar(next);
+});
+
+focusTitle.addEventListener('click', () => {
+  if (CHRON.mode === 'focused') openEventCard();
+});
+
+focusTitle.addEventListener('keydown', (event) => {
+  if (event.key !== 'Enter' && event.key !== ' ') return;
+  event.preventDefault();
+  if (CHRON.mode === 'focused') openEventCard();
+});
+
+eventCardClose.addEventListener('click', closeEventCard);
+detailLayer.addEventListener('click', (event) => {
+  if (event.target === detailLayer) closeEventCard();
+});
+
+document.addEventListener('keydown', (event) => {
+  if (event.key !== 'Escape') return;
+  if (chronicleView === 'timeline' && timelineView.classList.contains('is-detail-open')) {
+    clearTimelineSelection();
+    return;
+  }
+  if (charState.open) {
+    closeCharacter();
+    return;
+  }
+  if (CHRON.mode === 'card') {
+    closeEventCard();
+    return;
+  }
+  if (CHRON.mode === 'focused' || CHRON.mode === 'closing') {
+    cancelChronicle();
+  }
+});
+
+function updateChronicle(now, dt) {
+  if (!CHRON.ready || !CHRON.ctx) return;
+  CHRON.time += dt / 1000;
+
+  const zoomK = 1 - Math.exp(-dt / 120);
+  CHRON.zoom = lerp(CHRON.zoom, CHRON.zoomTarget, zoomK);
+
+  if (!CHRON.locked) {
+    const k = 1 - Math.exp(-dt / 145);
+    CHRON.yaw = lerp(CHRON.yaw, CHRON.targetYaw, k);
+    CHRON.pitch = lerp(CHRON.pitch, CHRON.targetPitch, k);
+  }
+
+  if (CHRON.mode === 'in' || CHRON.mode === 'out') {
+    const flight = CHRON.flight;
+    if (!flight) return;
+    const raw = clamp((now - flight.startTime) / flight.duration, 0, 1);
+    const t = easeInOutCubic(raw);
+    const mt = 1 - t;
+    const x = mt * mt * flight.from.x + 2 * mt * t * flight.ctrl.x + t * t * flight.to.x;
+    const y = mt * mt * flight.from.y + 2 * mt * t * flight.ctrl.y + t * t * flight.to.y;
+    flight.pos = { x, y };
+    flight.trail.push({ x, y });
+    if (flight.trail.length > 40) flight.trail.shift();
+
+    if (CHRON.mode === 'in') {
+      const focus = smoothstep(.32, .9, raw);
+      focusLayer.style.opacity = String(focus);
+      focusTitle.style.transform = `translateY(${(1 - focus) * 12}px)`;
+      if (raw >= 1) finishFocusFlight();
+    } else {
+      const fade = 1 - smoothstep(0, .58, raw);
+      focusLayer.style.opacity = String(fade);
+      if (raw >= 1) finishReturnFlight();
+    }
+  }
+
+  renderChronicle(now);
+}
+
+function drawChronicleDust() {
+  const ctx = CHRON.ctx;
+  const px = CHRON.mouse.active ? -CHRON.mouse.nx * 13 : 0;
+  const py = CHRON.mouse.active ? -CHRON.mouse.ny * 9 : 0;
+  for (const dust of CHRON.dust) {
+    const twinkle = .55 + .45 * Math.sin(CHRON.time * dust.speed + dust.phase);
+    ctx.globalAlpha = dust.alpha * twinkle;
+    ctx.fillStyle = '#cfe4ff';
+    ctx.fillRect(
+      dust.x * CHRON.w + px * dust.depth,
+      dust.y * CHRON.h + py * dust.depth,
+      dust.size,
+      dust.size
+    );
+  }
+  ctx.globalAlpha = 1;
+}
+
+function drawStarPoint(index, x, y, size, alpha, options = {}) {
+  const star = CHRON.stars[index];
+  const ctx = CHRON.ctx;
+  const color = star.event.partColor;
+  const sprite = getStarSprite(color);
+  const halo = Math.max(10, size * 9);
+  const pulse = options.pulse || 1;
+
+  ctx.globalCompositeOperation = 'lighter';
+  ctx.globalAlpha = clamp(alpha * .72, 0, 1);
+  ctx.drawImage(sprite, x - halo / 2, y - halo / 2, halo, halo);
+
+  ctx.globalAlpha = clamp(alpha, 0, 1);
+  ctx.beginPath();
+  ctx.arc(x, y, Math.max(.8, size * .55 * pulse), 0, TAU);
+  ctx.fillStyle = '#ffffff';
+  ctx.fill();
+
+  if (options.hover) {
+    ctx.globalAlpha = .55;
+    ctx.beginPath();
+    ctx.arc(x, y, Math.max(9, size * 3.2), 0, TAU);
+    ctx.strokeStyle = hexToRgba(color, .7);
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  }
+
+  if (options.match) {
+    const ringPulse = .5 + .5 * Math.sin(CHRON.time * 4.6 + index);
+    ctx.globalAlpha = .28 + ringPulse * .32;
+    ctx.beginPath();
+    ctx.arc(x, y, Math.max(8, size * 3 + ringPulse * 4), 0, TAU);
+    ctx.strokeStyle = color;
+    ctx.lineWidth = .8;
+    ctx.stroke();
+  }
+
+  if (options.selected) {
+    ctx.globalAlpha = .3;
+    ctx.beginPath();
+    ctx.arc(x, y, size * 3.4 + Math.sin(CHRON.time * 2.2) * 2, 0, TAU);
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  }
+
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.globalAlpha = 1;
+}
+
+function drawFlightTrail(flight, color) {
+  if (!flight || flight.trail.length < 2) return;
+  const ctx = CHRON.ctx;
+  const trail = flight.trail;
+  ctx.globalCompositeOperation = 'lighter';
+
+  // 拖影：一条逐渐变细、变淡的光尾，加上少量粒子。
+  for (let i = 1; i < trail.length; i += 1) {
+    const previous = trail[i - 1];
+    const point = trail[i];
+    const ratio = i / trail.length;
+    ctx.globalAlpha = ratio * .22;
+    ctx.strokeStyle = hexToRgba(color, 1);
+    ctx.lineWidth = 1 + ratio * 2;
+    ctx.beginPath();
+    ctx.moveTo(previous.x, previous.y);
+    ctx.lineTo(point.x, point.y);
+    ctx.stroke();
+
+    if (i % 3 === 0) {
+      ctx.globalAlpha = ratio * .2;
+      ctx.beginPath();
+      ctx.arc(point.x, point.y, 1 + ratio * 1.8, 0, TAU);
+      ctx.fillStyle = hexToRgba(color, 1);
+      ctx.fill();
+    }
+  }
+
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.globalAlpha = 1;
+}
+
+function renderChronicle(now) {
+  const ctx = CHRON.ctx;
+  if (!ctx) return;
+  ctx.clearRect(0, 0, CHRON.w, CHRON.h);
+
+  drawChronicleDust();
+
+  CHRON.stars.forEach((star) => { star.screen = projectStar(star); });
+
+  // 球体内部的微弱星尘：用来托出 3D 星穹的体积感
+  CHRON.sphereDust.forEach((dust, index) => {
+    const point = projectStar({ x: dust.x, y: dust.y, z: dust.z, baseSize: dust.baseSize });
+    const twinkle = .55 + .45 * Math.sin(CHRON.time * dust.speed + dust.phase);
+    ctx.globalAlpha = dust.alpha * twinkle * (0.4 + point.depth);
+    ctx.fillStyle = index % 7 === 0 ? '#d3c2ff' : '#b9d8ff';
+    ctx.beginPath();
+    ctx.arc(point.x, point.y, Math.max(.35, point.size * .42), 0, TAU);
+    ctx.fill();
+  });
+  ctx.globalAlpha = 1;
+
+  const focusActive = CHRON.mode !== 'idle' && CHRON.selected >= 0;
+  const order = CHRON.stars
+    .map((_, index) => index)
+    .sort((a, b) => CHRON.stars[a].screen.z - CHRON.stars[b].screen.z);
+
+  order.forEach((index) => {
+    if (focusActive && index === CHRON.selected) return;
+    const star = CHRON.stars[index];
+    const screen = star.screen;
+    const event = star.event;
+
+    let targetAlpha = .28 + screen.depth * .72;
+    const filteredOut = Boolean(CHRON.filter) && event.part !== CHRON.filter;
+    const searchMatch = Boolean(CHRON.query) && CHRON.matches.has(index);
+
+    if (filteredOut && !searchMatch) targetAlpha *= .055;
+    if (CHRON.filter && event.part === CHRON.filter && !CHRON.query) targetAlpha = Math.min(1, targetAlpha * 1.12);
+    if (CHRON.query) {
+      if (searchMatch) targetAlpha = Math.max(targetAlpha, .62) * (.95 + .1 * Math.sin(CHRON.time * 4.6 + index));
+      else targetAlpha *= .16;
+    }
+    if (focusActive) targetAlpha *= .42;
+    star.alpha = star.alpha === null ? targetAlpha : lerp(star.alpha, targetAlpha, .13);
+
+    const hoverTarget = CHRON.hovered === index ? 1.85 : 1;
+    star.scale = lerp(star.scale, hoverTarget, .18);
+
+    if (star.alpha < .015) return;
+    drawStarPoint(
+      index,
+      screen.x,
+      screen.y,
+      screen.size * star.scale,
+      clamp(star.alpha, 0, 1),
+      {
+        hover: CHRON.hovered === index,
+        match: Boolean(CHRON.query) && CHRON.matches.has(index)
+      }
+    );
+  });
+
+  if (CHRON.selected >= 0 && CHRON.mode !== 'idle') {
+    const star = CHRON.stars[CHRON.selected];
+    const color = star.event.partColor;
+    if (CHRON.mode === 'in' || CHRON.mode === 'out') {
+      const flight = CHRON.flight;
+      if (flight) {
+        drawFlightTrail(flight, color);
+        const pulse = .9 + .1 * Math.sin(CHRON.time * 7);
+        drawStarPoint(
+          CHRON.selected,
+          flight.pos.x,
+          flight.pos.y,
+          3.6 * pulse,
+          1,
+          { selected: true }
+        );
+      }
+    } else {
+      const pulse = .94 + .06 * Math.sin(CHRON.time * 2.6);
+      drawStarPoint(
+        CHRON.selected,
+        CHRON.w / 2,
+        CHRON.h * .5,
+        5.2 * pulse,
+        1,
+        { selected: true }
+      );
+    }
+  }
+
+  if (CHRON.hovered >= 0 && CHRON.mode === 'idle') {
+    positionStarTip(CHRON.stars[CHRON.hovered]);
+  }
+}
+
+/* ============================================================
+   人物长廊
+   ============================================================ */
+const characterLane = $('#characterLane');
+const charCount = $('#charCount');
+const lanePrev = $('#lanePrev');
+const laneNext = $('#laneNext');
+const laneProgressLabel = $('#laneProgressLabel');
+const laneProgressFill = $('#laneProgressFill');
+const characterLayer = $('#characterLayer');
+const charBackdrop = $('#charBackdrop');
+const charFlyer = $('#charFlyer');
+const characterStage = $('#characterStage');
+const charClose = $('#charClose');
+const stagePortrait = $('#stagePortrait');
+const stageHonor = $('#stageHonor');
+const charStageName = $('#charStageName');
+const stagePart = $('#stagePart');
+const stageIntro = $('#stageIntro');
+const stageExp = $('#stageExp');
+const stageEvents = $('#stageEvents');
+
+const charState = {
+  open: false,
+  opening: false,
+  index: -1,
+  card: null,
+  sourceRect: null,
+  openTimer: null,
+  closeTimer: null,
+  returnTimer: null,
+  suppressClickUntil: 0
+};
+
+function portraitHTML(char, index, large = false) {
+  const rgb = hexToRgb(char.color);
+  return `<div class="portrait" style="--accent:${char.color};--accent-rgb:${rgb}">
+    <span class="portrait-glyph" aria-hidden="true">${escapeHTML(char.name.slice(0, 1))}</span>
+    <span class="portrait-halo" aria-hidden="true"></span>
+    <span class="portrait-fallback" aria-hidden="true">
+      <span class="silhouette-head"></span>
+      <span class="silhouette-body"></span>
+    </span>
+    <img class="portrait-img" src="${escapeHTML(char.avatar)}" alt="" ${large ? 'loading="eager"' : 'loading="lazy"'} decoding="async" onload="this.classList.add('is-loaded')" onerror="this.remove()">
+    <span class="portrait-scan" aria-hidden="true"></span>
+    ${large ? '' : `<span class="portrait-index" aria-hidden="true">${String(index + 1).padStart(2, '0')}</span>`}
+  </div>`;
+}
+
+function charCardHTML(char, index) {
+  return `<button class="char-card" type="button" data-index="${index}"
+    style="--accent:${char.color};--accent-rgb:${hexToRgb(char.color)}"
+    aria-label="${escapeHTML(char.name)}，${escapeHTML(char.honor)}">
+    <span class="char-portrait">${portraitHTML(char, index)}</span>
+    <span class="char-card-body">
+      <span class="char-part"><i aria-hidden="true"></i>${escapeHTML(char.part)}</span>
+      <span class="char-name">${escapeHTML(char.name)}</span>
+      <span class="char-honor">${escapeHTML(char.honor)}</span>
+    </span>
+    <span class="char-open-hint" aria-hidden="true">查看人物 <span>→</span></span>
+  </button>`;
+}
+
+function renderCharacters() {
+  characterLane.innerHTML = characters.map((char, index) => charCardHTML(char, index)).join('');
+  charCount.textContent = `${characters.length} 位人物`;
+  updateLaneProgress();
+}
+
+function initCharacterDust() {
+  const bg = $('.characters-bg');
+  if (!bg) return;
+  const fragment = document.createDocumentFragment();
+  for (let i = 0; i < 46; i += 1) {
+    const dot = document.createElement('i');
+    dot.className = 'char-dust';
+    dot.style.left = `${(seeded(i, 31) * 100).toFixed(2)}%`;
+    dot.style.top = `${(seeded(i, 32) * 100).toFixed(2)}%`;
+    const size = seeded(i, 33) > .85 ? 2 : 1;
+    dot.style.width = `${size}px`;
+    dot.style.height = `${size}px`;
+    dot.style.opacity = String(.12 + seeded(i, 34) * .3);
+    fragment.appendChild(dot);
+  }
+  bg.appendChild(fragment);
+}
+
+let laneRaf = null;
+function laneScrollUpdate() {
+  if (laneRaf) return;
+  laneRaf = requestAnimationFrame(() => {
+    laneRaf = null;
+    updateLaneProgress();
+  });
+}
+
+function updateLaneProgress() {
+  if (!characterLane) return;
+  const max = characterLane.scrollWidth - characterLane.clientWidth;
+  const progress = max > 0 ? clamp(characterLane.scrollLeft / max, 0, 1) : 0;
+  laneProgressFill.style.width = `${(progress * 100).toFixed(2)}%`;
+
+  const cards = $$('.char-card', characterLane);
+  let step = 1;
+  if (cards.length > 1) step = cards[1].offsetLeft - cards[0].offsetLeft;
+  const current = clamp(Math.round(characterLane.scrollLeft / Math.max(step, 1)) + 1, 1, characters.length);
+  laneProgressLabel.textContent = `${String(current).padStart(2, '0')} / ${String(characters.length).padStart(2, '0')}`;
+
+  lanePrev.disabled = characterLane.scrollLeft <= 4;
+  laneNext.disabled = characterLane.scrollLeft >= max - 4;
+}
+
+function fillCharacterStage(char, index) {
+  characterStage.style.setProperty('--accent', char.color);
+  characterStage.style.setProperty('--accent-rgb', hexToRgb(char.color));
+  stagePortrait.innerHTML = portraitHTML(char, index, true);
+  stageHonor.textContent = char.honor;
+  charStageName.textContent = char.name;
+  stagePart.textContent = char.part;
+  stageIntro.textContent = char.intro;
+  stageExp.innerHTML = char.experiences
+    .map((item) => `<li>${escapeHTML(item)}</li>`)
+    .join('');
+  stageEvents.innerHTML = char.events.map((title) => {
+    const event = timelineData.find((item) => item.title === title);
+    const color = event ? event.partColor : char.color;
+    return `<button class="stage-event" type="button" data-event-title="${escapeHTML(title)}" style="--event-color:${color}">${escapeHTML(title)}</button>`;
+  }).join('');
+}
+
+function openCharacter(index, card) {
+  if (charState.open || characterLayer.classList.contains('is-open') || !characters[index] || !card) return;
+  const char = characters[index];
+
+  charState.open = true;
+  charState.opening = true;
+  charState.index = index;
+  charState.card = card;
+  charState.sourceRect = card.getBoundingClientRect();
+
+  fillCharacterStage(char, index);
+  characterStage.classList.remove('is-open');
+  characterLayer.classList.add('is-open');
+  characterLayer.setAttribute('aria-hidden', 'false');
+  characterLane.classList.add('is-locked');
+  lanePrev.disabled = true;
+  laneNext.disabled = true;
+  card.classList.add('is-away');
+
+  charFlyer.style.cssText = '';
+  charFlyer.style.setProperty('--accent', char.color);
+  charFlyer.style.zIndex = '44';
+  charFlyer.style.left = `${charState.sourceRect.left}px`;
+  charFlyer.style.top = `${charState.sourceRect.top}px`;
+  charFlyer.style.width = `${charState.sourceRect.width}px`;
+  charFlyer.style.height = `${charState.sourceRect.height}px`;
+  charFlyer.style.opacity = '1';
+  charFlyer.classList.remove('is-fading');
+  charFlyer.innerHTML = `${portraitHTML(char, index, true)}
+    <div class="flyer-caption">
+      <div class="flyer-name">${escapeHTML(char.name)}</div>
+      <div class="flyer-honor">${escapeHTML(char.honor)}</div>
+    </div>`;
+
+  const targetWidth = Math.min(window.innerWidth * .72, 420);
+  const targetHeight = Math.min(window.innerHeight * .66, 520);
+
+  requestAnimationFrame(() => {
+    charFlyer.style.left = `${(window.innerWidth - targetWidth) / 2}px`;
+    charFlyer.style.top = `${(window.innerHeight - targetHeight) / 2}px`;
+    charFlyer.style.width = `${targetWidth}px`;
+    charFlyer.style.height = `${targetHeight}px`;
+  });
+
+  clearTimeout(charState.openTimer);
+  charState.openTimer = setTimeout(() => {
+    charState.opening = false;
+    characterStage.classList.add('is-open');
+    charFlyer.classList.add('is-fading');
+    charClose.focus({ preventScroll: true });
+  }, 590);
+}
+
+function cleanupCharacterLayer() {
+  clearTimeout(charState.openTimer);
+  clearTimeout(charState.closeTimer);
+  clearTimeout(charState.returnTimer);
+  characterLayer.classList.remove('is-open');
+  characterLayer.setAttribute('aria-hidden', 'true');
+  characterStage.classList.remove('is-open');
+  charFlyer.classList.remove('is-fading');
+  charFlyer.style.opacity = '0';
+  charFlyer.innerHTML = '';
+  characterLane.classList.remove('is-locked');
+  if (charState.card) charState.card.classList.remove('is-away');
+  charState.open = false;
+  charState.opening = false;
+  charState.index = -1;
+  charState.card = null;
+  charState.sourceRect = null;
+  updateLaneProgress();
+}
+
+function closeCharacter(instant = false) {
+  const layerOpen = characterLayer.classList.contains('is-open');
+  if (!charState.open && !layerOpen) return;
+
+  if (instant) {
+    cleanupCharacterLayer();
+    return;
+  }
+  if (!charState.open) return;
+
+  clearTimeout(charState.openTimer);
+  charState.opening = false;
+  charState.open = false;
+
+  const card = charState.card;
+  const sourceRect = card ? card.getBoundingClientRect() : charState.sourceRect;
+  characterStage.classList.remove('is-open');
+
+  const targetWidth = Math.min(window.innerWidth * .72, 420);
+  const targetHeight = Math.min(window.innerHeight * .66, 520);
+  charFlyer.style.zIndex = '47';
+  charFlyer.style.left = `${(window.innerWidth - targetWidth) / 2}px`;
+  charFlyer.style.top = `${(window.innerHeight - targetHeight) / 2}px`;
+  charFlyer.style.width = `${targetWidth}px`;
+  charFlyer.style.height = `${targetHeight}px`;
+  charFlyer.style.opacity = '1';
+  charFlyer.classList.remove('is-fading');
+
+  void charFlyer.offsetWidth;
+
+  clearTimeout(charState.closeTimer);
+  charState.closeTimer = setTimeout(() => {
+    if (sourceRect) {
+      // 让详情层先淡出，再让卡片沿原路返回，避免两层叠在一起。
+      void charFlyer.offsetWidth;
+      charFlyer.style.left = `${sourceRect.left}px`;
+      charFlyer.style.top = `${sourceRect.top}px`;
+      charFlyer.style.width = `${sourceRect.width}px`;
+      charFlyer.style.height = `${sourceRect.height}px`;
+      charFlyer.classList.add('is-fading');
+    }
+    charState.returnTimer = setTimeout(() => {
+      const focusTarget = charState.card;
+      cleanupCharacterLayer();
+      if (focusTarget) focusTarget.focus({ preventScroll: true });
+    }, 620);
+  }, 190);
+}
+
+function openEventFromCharacter(title) {
+  const index = timelineData.findIndex((event) => event.title === title);
+  if (index < 0) return;
+
+  closeCharacter(true);
+  setPage('chronicle');
+
+  setTimeout(() => {
+    if (!CHRON.ready) return;
+    resizeChronicle();
+    CHRON.filter = null;
+    CHRON.query = '';
+    searchInput.value = '';
+    applyChronicleQuery();
+    CHRON.stars.forEach((star) => { star.screen = projectStar(star); });
+    selectStar(index);
+  }, 320);
+}
+
+/* 长廊交互 */
+characterLane.addEventListener('click', (event) => {
+  if (performance.now() < charState.suppressClickUntil) return;
+  const card = event.target.closest('.char-card');
+  if (!card) return;
+  openCharacter(Number(card.dataset.index), card);
+});
+
+characterLane.addEventListener('wheel', (event) => {
+  if (charState.open) return;
+  const max = characterLane.scrollWidth - characterLane.clientWidth;
+  if (max <= 0) return;
+  const delta = Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : event.deltaY;
+  if (!delta) return;
+  event.preventDefault();
+  characterLane.scrollLeft = clamp(characterLane.scrollLeft + delta, 0, max);
+}, { passive: false });
+
+characterLane.addEventListener('scroll', laneScrollUpdate, { passive: true });
+
+characterLane.addEventListener('keydown', (event) => {
+  if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+  event.preventDefault();
+  const cards = $$('.char-card', characterLane);
+  const step = cards.length > 1 ? cards[1].offsetLeft - cards[0].offsetLeft : 260;
+  characterLane.scrollBy({ left: event.key === 'ArrowRight' ? step : -step, behavior: 'smooth' });
+});
+
+lanePrev.addEventListener('click', () => {
+  const cards = $$('.char-card', characterLane);
+  const step = cards.length > 1 ? cards[1].offsetLeft - cards[0].offsetLeft : 260;
+  characterLane.scrollBy({ left: -step * 1.5, behavior: 'smooth' });
+});
+
+laneNext.addEventListener('click', () => {
+  const cards = $$('.char-card', characterLane);
+  const step = cards.length > 1 ? cards[1].offsetLeft - cards[0].offsetLeft : 260;
+  characterLane.scrollBy({ left: step * 1.5, behavior: 'smooth' });
+});
+
+charClose.addEventListener('click', () => closeCharacter());
+charBackdrop.addEventListener('click', () => closeCharacter());
+
+stageEvents.addEventListener('click', (event) => {
+  const target = event.target.closest('.stage-event');
+  if (!target) return;
+  openEventFromCharacter(target.dataset.eventTitle);
+});
+
+/* ============================================================
+   启动与主循环
+   ============================================================ */
+function handleResize() {
+  resizeIntro();
+  resizeChronicle();
+  updateLaneProgress();
+  syncChronHeader();
+  if (chronicleView === 'timeline') syncTimelineView();
+}
+
+let resizeTimer = null;
+window.addEventListener('resize', () => {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(handleResize, 120);
+});
+
+document.addEventListener('keydown', (event) => {
+  if (event.key !== '/' || appState.page !== 'chronicle') return;
+  const tag = document.activeElement && document.activeElement.tagName;
+  if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+  event.preventDefault();
+  searchInput.focus();
+});
+
+let lastFrame = performance.now();
+function frame(now) {
+  const dt = Math.min(48, now - lastFrame);
+  lastFrame = now;
+
+  if (appState.page === 'intro') {
+    if (!reducedMotion) updateIntro(dt);
+    if (!reducedMotion || !intro.hasDrawn) renderIntro();
+  } else if (appState.page === 'chronicle' && chronicleView === 'stars') {
+    updateChronicle(now, dt);
+  }
+
+  requestAnimationFrame(frame);
+}
+
+function init() {
+  initIntro();
+  initChronicle();
+  buildTimelineView();
+  syncChronHeader();
+  initAudio();
+  renderCharacters();
+  initCharacterDust();
+  applyChronicleQuery();
+  updateChronicleMeta();
+  updateLaneProgress();
+
+  if ('ResizeObserver' in window) {
+    const bar = $('.chron-bar');
+    if (bar) new ResizeObserver(syncChronHeader).observe(bar);
+  }
+
+  requestAnimationFrame(() => {
+    resizeIntro();
+    resizeChronicle();
+    updateLaneProgress();
+    syncChronHeader();
+    if (reducedMotion) renderIntro();
+  });
+
+  requestAnimationFrame(frame);
+}
+
+init();
+</script>
+</body>
+</html>
